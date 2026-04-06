@@ -379,6 +379,9 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+# Ignore the entire build directory
+[Bb]uild/
+
 # VS Code files for those working on multiple tools
 .vscode/*
 !.vscode/settings.json
