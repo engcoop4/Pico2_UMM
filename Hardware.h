@@ -34,6 +34,11 @@
 #define RSUP LCD_PIN_HI_DATA
 #define RSDOWN LCD_PIN_LOW_CMD
 
+#define LED1 6
+#define LED2 7
+#define LED3 8
+#define LED4 9
+
 #define RESETUP gpio_put(PIN_RST, 1)   // GPIO 13 high
 #define RESETDOWN gpio_put(PIN_RST, 0) // GPIO 13 low
 
