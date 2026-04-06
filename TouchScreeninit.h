@@ -1,0 +1,4 @@
+#ifndef TOUCHSCREENINIT_H_
+#define TOUCHSCREENINIT_H_
+
+#endif /* TOUCHSCREENINIT_H_ */
