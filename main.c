@@ -44,35 +44,23 @@ char const *display_unit[6] = {
 
 int main()
 {
+    sleep_ms(100);
     stdio_init_all();
-    
-    // test function for button assignment
-    // same as setting them using: gpio_set_function(SW1, GPIO_FUNC_SIO) (SIO == Simple Input/Output)
-    gpio_init(SW1);
-    gpio_init(SW2);
-    gpio_init(SW3);
-    gpio_init(SW4);
 
-    gpio_set_dir(SW1, GPIO_IN);
-    gpio_set_dir(SW2, GPIO_IN);
-    gpio_set_dir(SW3, GPIO_IN);
-    gpio_set_dir(SW4, GPIO_IN);
-
-    // pull-up since buttons are active low
-    gpio_pull_up(SW1);
-    gpio_pull_up(SW2);
-    gpio_pull_up(SW3);
-    gpio_pull_up(SW4);
+    Buttons_Init();
+    LEDs_Init();
 
     // 2. Initialize ONLY the SPI1 and LCD pins
     SPI_init();
     LCD_DMA_Init();
 
     LCDSetup();
+
     
     // ---------------------------------------------------------
     // MASTER LOOP: This allows "Soft Resets" to return to menu
     // ---------------------------------------------------------
+    
     
     while (1)
     {

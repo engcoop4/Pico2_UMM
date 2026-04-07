@@ -18,14 +18,16 @@
 #define SW3 4
 #define SW4 5
 
+void Buttons_Init(void);
+
 // --- LCD Pin Mapping ---
 // Replaces P4_56_mode and P4_7_MODE logic
 #define PIN_SCK 10 // #define [name] [associated GPIO]
 #define PIN_MOSI 11
 #define PIN_MISO 12 // Not used by LCD but reserved for SPI1
-#define PIN_CS 9
+#define PIN_CS 13
 #define PIN_DC 14  // Replaces P4_7 (UMM board), Logic: 0 for cmd, 1 for data
-#define PIN_RST 13 // Replaces P3_7 (UMM board), Logic: 0 for RESETDOWN, and 1 for RESETUP
+#define PIN_RST 15 // Replaces P3_7 (UMM board), Logic: 0 for RESETDOWN, and 1 for RESETUP
 
 // --- LCD Logic Macros ---
 // Replaces LCD_PIN_HI_DATA, RSUP, etc.
@@ -38,6 +40,8 @@
 #define LED2 7
 #define LED3 8
 #define LED4 9
+
+void LEDs_Init(void);
 
 #define RESETUP gpio_put(PIN_RST, 1)   // GPIO 13 high
 #define RESETDOWN gpio_put(PIN_RST, 0) // GPIO 13 low

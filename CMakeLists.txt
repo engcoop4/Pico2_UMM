@@ -43,6 +43,7 @@ add_executable(main
     cmdProcessing.c
     TouchScreeninit.c
     UART.c
+    Hardware.c
     )
 
 pico_set_program_name(main "main")
