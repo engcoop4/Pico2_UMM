@@ -49,8 +49,8 @@ pico_set_program_name(main "main")
 pico_set_program_version(main "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(main 1)       #must be 1 for printf to work.
-pico_enable_stdio_usb(main 1)   # change from 0 to 1 to enable USB output, 1 to disable USB output ?
+pico_enable_stdio_uart(main 0)       # change to 1 if using UART on debug probe, 0 to disable UART output (form of communication)
+pico_enable_stdio_usb(main 1)   # change to 1 to enable USB output, 0 to disable USB output (form of communication)
 
 # Add the standard library to the build
 target_link_libraries(main

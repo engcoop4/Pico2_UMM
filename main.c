@@ -45,7 +45,7 @@ char const *display_unit[6] = {
 int main()
 {
     stdio_init_all();
-
+    
     // test function for button assignment
     // same as setting them using: gpio_set_function(SW1, GPIO_FUNC_SIO) (SIO == Simple Input/Output)
     gpio_init(SW1);
@@ -69,10 +69,11 @@ int main()
     LCD_DMA_Init();
 
     LCDSetup();
-
+    
     // ---------------------------------------------------------
     // MASTER LOOP: This allows "Soft Resets" to return to menu
     // ---------------------------------------------------------
+    
     while (1)
     {
         // PHASE 1: UI SETUP DISPATCHER

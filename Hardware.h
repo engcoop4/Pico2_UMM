@@ -42,11 +42,13 @@
 #define RESETUP gpio_put(PIN_RST, 1)   // GPIO 13 high
 #define RESETDOWN gpio_put(PIN_RST, 0) // GPIO 13 low
 
+/*
 // --- UART Configuration ---
 #define UART_ID uart0
 #define UART_BAUD_RATE 115200
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
+*/
 
 // --- Helper Macros ---
 // Replaces pgm_read_byte for compatibility
