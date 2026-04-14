@@ -62,10 +62,7 @@ int main()
 
     while (1)
     {
-        printf("Test USBC for Communicaion\n");
-        sleep_ms(1000);
 
-        /*
         // PHASE 1: UI SETUP DISPATCHER
         // Runs until current_screen == InitializationDone
         while (current_screen != InitializationDone)
@@ -73,7 +70,7 @@ int main()
             /*
             uart_command_received = 0;
             ParseRCI();
-            
+            */
             if (force_redraw)
             {
                 switch (current_screen)
@@ -107,7 +104,6 @@ int main()
             }
             WaitForInput(); // Now detects the Soft Return flag
         }
-        */
             
     }
     
