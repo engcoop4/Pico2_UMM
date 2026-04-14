@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-//#include "TouchScreeninit.h"
+// #include "TouchScreeninit.h"
 #include "AdafruitDisplayInits.h"
 #include "Global.h"
 
@@ -28,9 +28,9 @@ uint8_t LCD_ch_source[7] = {1, 2, 3, 4, 5, 6, 7};
 // LCD Graphical Setup
 /*+++++++++++++++Private Logic Variables+++++++++++++++*/
 // Used in ChannelSelection to create boxes displaying chosen channels
-static int j_idx = 1;       // used to index through the displays in ChannelSelection
-static int title_index;     // used to index title on final display screen (resetting cursor_position caused title to always default to "1-Phase Power AC")
-int idx;                    // used to index variables of UpdateChannelSelection
+static int j_idx = 1;   // used to index through the displays in ChannelSelection
+static int title_index; // used to index title on final display screen (resetting cursor_position caused title to always default to "1-Phase Power AC")
+int idx;                // used to index variables of UpdateChannelSelection
 int num_boxes;
 int x;
 int y;
@@ -42,10 +42,10 @@ extern uint16_t touch_baseline;
 extern volatile uint16_t touch_triggered;
 extern volatile uint8_t return_request_flag;
 
-static int lastB1 = 0;      // last button state SW1 (UP)
-static int lastB2 = 0;      // last button state SW2 (DOWN)
-static int lastEnter = 0;   // last button state SW4 (ENTER)
-static int lastReturn = 0;  // last button state SW3 (RETURN)
+static int lastB1 = 0;     // last button state SW1 (UP)
+static int lastB2 = 0;     // last button state SW2 (DOWN)
+static int lastEnter = 0;  // last button state SW4 (ENTER)
+static int lastReturn = 0; // last button state SW3 (RETURN)
 
 extern volatile uint8_t entry_method;
 
@@ -62,56 +62,51 @@ char conv;
 
 //+++++++++++++++Look-Up Tables+++++++++++++++
 // More easily modifiable than re-entering text for FindCenterX, FindCenterY, and print statements
-//ButtonLayout()
+// ButtonLayout()
 const char *LEDs[4] = {
     "AUTO",
     "ALARM",
     "PULSE ON",
-    "T/R"
-};
+    "T/R"};
 
-//ControlsDisplay()
+// ControlsDisplay()
 const char *buttons[4] = {
     "UP",
     "ENTER",
     "DOWN",
-    "RETURN"
-};
+    "RETURN"};
 
-//OperatingMode()
+// OperatingMode()
 const char *title[5] = {
     "1-Phase Power AC",
     "3-Phase Power AC",
     "Wattmeter",
     "Frequency Meter",
-    "CUSTOM"
-};
+    "CUSTOM"};
 uint32_t box_color[5] = {GREY, DARK_GREY, PURPLE, MAROON, MAGENTA};
 
-//ChannelSelection()
+// ChannelSelection()
 const char *syncbox[6] = {
     "A: ",
     "B: ",
     "C: ",
     "D: ",
     "E: ",
-    "F: "
-};
+    "F: "};
 const int xcord[6] = {6, 133, 6, 133, 6, 133};
 const int ycord[6] = {179, 179, 226, 226, 273, 273};
 
-//DisplayChannels()
+// DisplayChannels()
 int16_t saved_Ypos[7];
 int diff_display[8] = {31, 100, 90, 80, 66, 51, 42, 35};
 int additional_offset[7] = {79, 34, 9, 0, 0, 0, 0};
 uint32_t header_color[7] = {RED, GREEN, BLUE, MAGENTA, BROWN, SKY_BLUE, ORANGE};
-char const* display_title[5] = {
+char const *display_title[5] = {
     "1-Phase Power AC",
     "3-Phase Power AC",
     "Wattmeter",
     "Frequency",
-    "CUSTOM DISPLAY"
-};
+    "CUSTOM DISPLAY"};
 
 //------------------------------------------------------------------------------------------LCD GRAPHIC DISPLAY-----------------------------------------------------------------------------------------------------------
 void LCDSetup(void)
@@ -123,60 +118,63 @@ void LCDSetup(void)
     LCD_Clear(BLACK);
 }
 
-void ButtonLayout(void){
-            // Controlled by SW1
-            Rectf(6, 178, 100, 25, YELLOW);
-            print(FindCenterX(6, 100, buttons[0], 1), FindCenterY(178, 25, buttons[0],1), buttons[0], BLACK, YELLOW, 1, 1, 239);
+void ButtonLayout(void)
+{
+    // Controlled by SW1
+    Rectf(6, 178, 100, 25, YELLOW);
+    print(FindCenterX(6, 100, buttons[0], 1), FindCenterY(178, 25, buttons[0], 1), buttons[0], BLACK, YELLOW, 1, 1, 239);
 
-            // Controlled by SW2
-            Rectf(133, 178, 100, 25, GREEN);
-            print(FindCenterX(133, 100, buttons[1], 1), FindCenterY(178, 25, buttons[1],1), buttons[1], BLACK, GREEN, 1, 1, 231);
+    // Controlled by SW2
+    Rectf(133, 178, 100, 25, GREEN);
+    print(FindCenterX(133, 100, buttons[1], 1), FindCenterY(178, 25, buttons[1], 1), buttons[1], BLACK, GREEN, 1, 1, 231);
 
-            // Controlled by SW4
-            Rectf(6, 255, 100, 25, WHITE);
-            print(FindCenterX(6, 100, buttons[2], 1), FindCenterY(255, 25, buttons[2], 1), buttons[2], BLACK, WHITE, 1, 1, 239);
+    // Controlled by SW4
+    Rectf(6, 255, 100, 25, WHITE);
+    print(FindCenterX(6, 100, buttons[2], 1), FindCenterY(255, 25, buttons[2], 1), buttons[2], BLACK, WHITE, 1, 1, 239);
 
-            // Controlled by SW3
-            Rectf(133, 255, 100, 25, RED);
-            print(FindCenterX(133, 100, buttons[3], 1), FindCenterY(255, 25, buttons[3], 1), buttons[3], BLACK, RED, 1, 1, 231);
+    // Controlled by SW3
+    Rectf(133, 255, 100, 25, RED);
+    print(FindCenterX(133, 100, buttons[3], 1), FindCenterY(255, 25, buttons[3], 1), buttons[3], BLACK, RED, 1, 1, 231);
 
-            return;
+    return;
 }
 
-void ControlsDisplay(void) {
+void ControlsDisplay(void)
+{
 
-        LCD_Clear(BLACK);
+    LCD_Clear(BLACK);
 
-        // Header
-        Rectf(6, 0, 227, 25, WHITE);
-        print(FindCenterX(6, 231, "MENU - CONTROLS", 1), FindCenterY(0, 25, "MENU - CONTROLS", 1), "MENU - CONTROLS", BLACK, WHITE, 1, 1, 231);
+    // Header
+    Rectf(6, 0, 227, 25, WHITE);
+    print(FindCenterX(6, 231, "MENU - CONTROLS", 1), FindCenterY(0, 25, "MENU - CONTROLS", 1), "MENU - CONTROLS", BLACK, WHITE, 1, 1, 231);
 
-        // LED Labels
-        Rectf(6, 30, 100, 25, WHITE);
-        print(FindCenterX(6, 100, LEDs[0], 1), FindCenterY(30, 25, LEDs[0], 1), LEDs[0], BLACK, WHITE, 1, 1, 239);
+    // LED Labels
+    Rectf(6, 30, 100, 25, WHITE);
+    print(FindCenterX(6, 100, LEDs[0], 1), FindCenterY(30, 25, LEDs[0], 1), LEDs[0], BLACK, WHITE, 1, 1, 239);
 
-        Rectf(133, 30, 100, 25, WHITE);
-        print(FindCenterX(133, 100, LEDs[1], 1), FindCenterY(30, 25, LEDs[1], 1), LEDs[1], BLACK, WHITE, 1, 1, 231);
+    Rectf(133, 30, 100, 25, WHITE);
+    print(FindCenterX(133, 100, LEDs[1], 1), FindCenterY(30, 25, LEDs[1], 1), LEDs[1], BLACK, WHITE, 1, 1, 231);
 
-        Rectf(6, 70, 100, 25, WHITE);
-        print(FindCenterX(6, 100, LEDs[2], 1), FindCenterY(70, 25, LEDs[2], 1), LEDs[2], BLACK, WHITE, 1, 1, 239);
+    Rectf(6, 70, 100, 25, WHITE);
+    print(FindCenterX(6, 100, LEDs[2], 1), FindCenterY(70, 25, LEDs[2], 1), LEDs[2], BLACK, WHITE, 1, 1, 239);
 
-        Rectf(133, 70, 100, 25, WHITE);
-        print(FindCenterX(133, 100, LEDs[3], 1), FindCenterY(70, 25, LEDs[3], 1), LEDs[3], BLACK, WHITE, 1, 1, 231);
+    Rectf(133, 70, 100, 25, WHITE);
+    print(FindCenterX(133, 100, LEDs[3], 1), FindCenterY(70, 25, LEDs[3], 1), LEDs[3], BLACK, WHITE, 1, 1, 231);
 
-        //ButtonLayout();
+    // ButtonLayout();
 }
 
 // Remain on touchscreen decision until ENABLE or DISABLE chosen. Hitting buttons will highlight boxes to indicate selection
 // (not yet implemented aside from graphically - touch screen must be set-up)
-void TouchScreenDecision(void) {
+void TouchScreenDecision(void)
+{
     LCD_Clear(BLACK);
 
     // Header
     Rectf(6, 6, 227, 72, WHITE);
     print(FindCenterX(6, 227, "SCREEN SETTINGS", 1), FindCenterY(6, 72, "SCREEN SETTINGS", 1), "SCREEN SETTINGS", BLACK, WHITE, 1, 1, 239);
 
-    print(FindCenterX(0, 239 , "Touch Screen?", 1), FindCenterY(78, 86, "Touch Screen?", 1), "Touch Screen?", WHITE, BLACK, 1, 1, 239);
+    print(FindCenterX(0, 239, "Touch Screen?", 1), FindCenterY(78, 86, "Touch Screen?", 1), "Touch Screen?", WHITE, BLACK, 1, 1, 239);
 
     Rectf(6, 164, 227, 52, GREEN);
     print(FindCenterX(6, 227, "ENABLE", 1), FindCenterY(164, 52, "ENABLE", 1), "ENABLE", BLACK, GREEN, 1, 1, 239);
@@ -185,42 +183,51 @@ void TouchScreenDecision(void) {
     print(FindCenterX(6, 227, "DISABLE", 1), FindCenterY(245, 52, "DISABLE", 1), "DISABLE", BLACK, RED, 1, 1, 239);
 
     // Initial highlight based on current cursor_position
-    if (cursor_position == 0) {
+    if (cursor_position == 0)
+    {
         Rect(6, 163, 227, 53, WHITE);
         Rect(6, 244, 227, 53, BLACK);
-    } else {
+    }
+    else
+    {
         Rect(6, 244, 227, 53, WHITE);
         Rect(6, 163, 227, 53, BLACK);
     }
-        UpdateTouchHighlight();
+    UpdateTouchHighlight();
 }
 
 // Controls highlight updates after initial screen created
-void UpdateTouchHighlight(void) {
+void UpdateTouchHighlight(void)
+{
 
-    if (cursor_position == 0) {
+    if (cursor_position == 0)
+    {
         Rect(6, 163, 227, 53, WHITE);
         Rect(6, 244, 227, 53, BLACK);
-    } else {
+    }
+    else
+    {
         Rect(6, 163, 227, 53, BLACK);
         Rect(6, 244, 227, 53, WHITE);
     }
 }
 
 // screen for user to set-up touch calibration
-void TouchCalibration(void) {
+void TouchCalibration(void)
+{
     LCD_Clear(BLACK);
     cali = 0;
 
     print_centered(FindCenterY(0, 319, "PRESS CIRCLE TO START CALIBRATION", 1),
-          "PRESS CIRCLE TO START CALIBRATION", WHITE, BLACK, 1, 1, 239);
+                   "PRESS CIRCLE TO START CALIBRATION", WHITE, BLACK, 1, 1, 239);
 
     // first calibration circle
     Circlef(15, 15, 15, RED);
     Circle(15, 15, 15, WHITE);
 }
 
-void UpdateTouchCalibration(void) {
+void UpdateTouchCalibration(void)
+{
     cali = 1;
     Rectf(0, 0, 35, 35, BLACK);
 
@@ -228,20 +235,21 @@ void UpdateTouchCalibration(void) {
     Circlef(223, 303, 15, RED);
     Circle(223, 303, 15, WHITE);
 
-    //TouchScreenReset();
+    // TouchScreenReset();
 }
 
-void FinishTouchCalibration(void) {
+void FinishTouchCalibration(void)
+{
 
     Rectf(0, 130, 239, 190, BLACK);
 
     print_centered(FindCenterY(0, 319, "CALIBRATION COMPLETE", 1),
-          "CALIBRATION COMPELTE", WHITE, BLACK, 1, 1, 239);
-
+                   "CALIBRATION COMPELTE", WHITE, BLACK, 1, 1, 239);
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
-void OperatingMode(void) {
+void OperatingMode(void)
+{
     uint8_t i;
 
     LCD_Clear(BLACK);
@@ -253,7 +261,8 @@ void OperatingMode(void) {
           "Operating Mode", BLACK, WHITE, 1, 1, 239);
 
     // Draw the 5 Operating Mode Boxes
-    for(i = 0; i < 5; i++) {
+    for (i = 0; i < 5; i++)
+    {
         Rectf(6, (60 + (i * 52)), 227, 48, box_color[i]);
         print(FindCenterX(6, 227, title[i], 1),
               FindCenterY((60 + (i * 52)), 48, title[i], 1),
@@ -264,11 +273,13 @@ void OperatingMode(void) {
     Rect(6, 60 + (52 * cursor_position), 227, 48, WHITE);
 }
 
-void UpdateOperatingModeSelection(void) {
+void UpdateOperatingModeSelection(void)
+{
     int i;
     // 1. Draw a "Neutral" state (Black boxes) over the highlight areas
     // This effectively "erases" the old white selection border
-    for(i = 0; i < 5; i++) {
+    for (i = 0; i < 5; i++)
+    {
 
         Rect(6, 60 + (52 * i), 227, 48, BLACK);
     }
@@ -279,7 +290,8 @@ void UpdateOperatingModeSelection(void) {
 
 // Shows number of displays and implements UP as a +1 and DOWN as a -1. Minimum is 1, maximum is 7
 // Holding SW1 for 3 seconds maxs to 7, holding SW2 for 3 seconds decrements to 1 immediately (not implemented yet)
-void NumberOfDisplays(void) {
+void NumberOfDisplays(void)
+{
     LCD_Clear(BLACK);
 
     Rectf(6, 6, 227, 50, WHITE);
@@ -287,7 +299,8 @@ void NumberOfDisplays(void) {
           FindCenterY(6, 50, "Number of Displays", 1),
           "Number of Displays", BLACK, WHITE, 1, 1, 239);
 
-    if(touch_init) {
+    if (touch_init)
+    {
         Rectf(6, 61, 227, 188, WHITE);
         // ENTER
         Rectf(6, 255, 100, 50, RED);
@@ -307,24 +320,28 @@ void NumberOfDisplays(void) {
         Trianglef(10, 155, 30, 175, 30, 135, RED);
         Trianglef(229, 155, 209, 175, 209, 135, RED);
     }
-    else {
+    else
+    {
         Rectf(6, 61, 227, 257, WHITE);
     }
 
     UpdateNumberOfDisplays();
 }
 
-void UpdateNumberOfDisplays(void) {
+void UpdateNumberOfDisplays(void)
+{
     int y;
-    //ResetLCDMapping();
+    // ResetLCDMapping();
 
     // if touch enabled, screen is shorter to account for ENTER/RETURN buttons
-    if(touch_init) {
+    if (touch_init)
+    {
         y = 194;
     }
-    else y = 258;
+    else
+        y = 258;
 
-// need to make the find enter y dynamic
+    // need to make the find enter y dynamic
     sprintf(display, "%d", numberdisplays);
     print(FindCenterX(0, 239, "1", 3),
           FindCenterY(61, y, "1", 3),
@@ -332,7 +349,8 @@ void UpdateNumberOfDisplays(void) {
 }
 
 // modify to have condensed screen if touch_init initialized (use touch_init * [factor]) to adjust bounds ?, 0 means no bounds adjustment, 1 means bounds adjustment)
-void ChannelSelection(void) {
+void ChannelSelection(void)
+{
     static const int W = 100;
     static const int H = 42;
     static const int startX = 6;
@@ -350,7 +368,8 @@ void ChannelSelection(void) {
           "Channel Selection", BLACK, WHITE, 1, 1, 239);
 
     num_boxes = numberdisplays - 1;
-    for (sync_chan = 0; sync_chan < num_boxes; sync_chan++) {
+    for (sync_chan = 0; sync_chan < num_boxes; sync_chan++)
+    {
         int col = sync_chan % 2;
         int row = sync_chan / 2;
 
@@ -364,14 +383,16 @@ void ChannelSelection(void) {
     }
 
     // Enter and Return buttons on bottom of screen for touch
-    if(touch_init) {
-    Rectf(6, 279, 100, 36, RED);
-    Rectf(133, 279, 100, 36, GREEN);
-    print(FindCenterX(6, 100, "RETURN", 1), FindCenterY(279, 36, "RETURN", 1), "RETURN", BLACK, RED, 1, 1, 239);
-    print(FindCenterX(133, 100, "ENTER", 1), FindCenterY(279, 36, "ENTER", 1), "ENTER", BLACK, GREEN, 1, 1, 239);
+    if (touch_init)
+    {
+        Rectf(6, 279, 100, 36, RED);
+        Rectf(133, 279, 100, 36, GREEN);
+        print(FindCenterX(6, 100, "RETURN", 1), FindCenterY(279, 36, "RETURN", 1), "RETURN", BLACK, RED, 1, 1, 239);
+        print(FindCenterX(133, 100, "ENTER", 1), FindCenterY(279, 36, "ENTER", 1), "ENTER", BLACK, GREEN, 1, 1, 239);
     }
 
-    if(touch_init) {
+    if (touch_init)
+    {
         Trianglef(11, 89, 31, 109, 31, 69, RED);
         Trianglef(228, 89, 208, 109, 208, 69, RED);
     }
@@ -379,12 +400,14 @@ void ChannelSelection(void) {
     UpdateChannelSelection();
 }
 
-void UpdateChannelSelection(void) {
+void UpdateChannelSelection(void)
+{
     static int last_num = -1;
     static int last_idx = -1;
     int i;
 
-    if (lcd_change) {
+    if (lcd_change)
+    {
         last_num = -1;
         last_idx = -1;
     }
@@ -399,39 +422,43 @@ void UpdateChannelSelection(void) {
     conv = j_idx + 64;
 
     // handles main labels, screen_changed modified to include refresh clause
-    if (screen_changed) {
+    if (screen_changed)
+    {
         char prefix[4] = {(char)conv, ':', ' ', '\0'};
         print(40 - (touch_init * 32), 96 - (touch_init * 53), prefix, header_color[idx], WHITE, 3 - (touch_init * 2), 3 - (touch_init * 2), 239);
         last_idx = j_idx;
-
     }
 
     // handles large number in middle
-    if (number_changed || screen_changed) {
+    if (number_changed || screen_changed)
+    {
         char num_str[12];
         itoa(numberchannels, num_str, 10);
         print(FindCenterX(6, 227, "0", 3) * touch_init + 148 - (148 * touch_init), FindCenterY(61 - (touch_init * 20), 113 - (touch_init * 20), "0", 3), num_str, RED, WHITE, 3, 3, 239);
 
-        if (idx >= 0 && idx < 7) {
+        if (idx >= 0 && idx < 7)
+        {
             LCD_ch_source[idx] = (uint8_t)numberchannels;
         }
         last_num = numberchannels;
     }
-
 
     // needs to compare max number of boxes (1 less than display) to current index
     // to determine how many stored values from array must be called without
     // displaying a ghost number
     int max_boxes = numberdisplays - 1;
 
-    if (refresh_required) {
+    if (refresh_required)
+    {
         // only draw boxes up to max_boxes, and only if the index hasn't exceeded it
         int limit = (j_idx < max_boxes) ? j_idx : max_boxes;
 
-        for (i = 0; i < limit; i++) {
+        for (i = 0; i < limit; i++)
+        {
             char chan_sel[4];
             int val = (int)LCD_ch_source[i];
-            if (val == 0) val = 1;
+            if (val == 0)
+                val = 1;
 
             itoa(val, chan_sel, 10);
 
@@ -441,7 +468,8 @@ void UpdateChannelSelection(void) {
         }
     }
 
-    else if ((number_changed || screen_changed) && idx < max_boxes && idx >= 0) {
+    else if ((number_changed || screen_changed) && idx < max_boxes && idx >= 0)
+    {
         char chan_sel[4];
         itoa(numberchannels, chan_sel, 10);
         print(FindCenterX(xcord[idx], 100, "0", 1),
@@ -451,52 +479,56 @@ void UpdateChannelSelection(void) {
 }
 
 // Can alter preset configurations
-void PresetConfigs(void){
-// Use cursor_position as index for
+void PresetConfigs(void)
+{
+    // Use cursor_position as index for
     // Preset configs used only to update variables that DisplayChannels will use, does not execute its own screen so goes immediately into DisplayChannels using current_screen indexing
     selected_display = cursor_position;
-    switch(selected_display) {
-        case One_Phase_AC:
-            LCD_ch_source[0] = 1;
-            LCD_ch_source[1] = 4;
-            LCD_ch_source[2] = 5;
-            unit_index = 0;
-            numberdisplays = 3;
-            break;
-        case Three_Phase_AC:
-            // specifically for three phase power, need default LCD mapping
-            //ResetLCDMapping();
-            unit_index = 0;
-            numberdisplays = 7;
-            break;
-        case Wattmeter:
-            unit_index = 4;
-            numberdisplays = 1;
-            break;
-        case FreqMeter:
-            unit_index = 5;
-            numberdisplays = 1;
-            break;
+    switch (selected_display)
+    {
+    case One_Phase_AC:
+        LCD_ch_source[0] = 1;
+        LCD_ch_source[1] = 4;
+        LCD_ch_source[2] = 5;
+        unit_index = 0;
+        numberdisplays = 3;
+        break;
+    case Three_Phase_AC:
+        // specifically for three phase power, need default LCD mapping
+        // ResetLCDMapping();
+        unit_index = 0;
+        numberdisplays = 7;
+        break;
+    case Wattmeter:
+        unit_index = 4;
+        numberdisplays = 1;
+        break;
+    case FreqMeter:
+        unit_index = 5;
+        numberdisplays = 1;
+        break;
     }
     // REMOVED FOR INITIAL TESTING. RESTORE EVENTUALLY
-    //current_screen = Screen_DisplayChannels;
-    //force_redraw = true;
+    // current_screen = Screen_DisplayChannels;
+    // force_redraw = true;
 }
 
 // The various operating modes can set values like numberdisplays an input string for title, and desired unit
 // the main differences will be which channel goes to which display
-void DisplayChannels(void){
+void DisplayChannels(void)
+{
     int i;
     LCD_Clear(BLACK);
     InitYPositions();
 
-    Rectf(6, 0, 228, 25, WHITE);     // Rectangle fill
+    Rectf(6, 0, 228, 25, WHITE); // Rectangle fill
     // implement command to rename custom display ?
     print(FindCenterX(6, 228, display_title[title_index], 1) - (FindCenterX(6, 228, display_title[title_index], 1) * touch_init) + (12 * touch_init), FindCenterY(0, 25, display_title[title_index], 1), display_title[title_index], BLACK, WHITE, 1, 1, 231);
 
     // determine number of rectangles needed based on numberdisplays
 
-    for(i = 0; i < numberdisplays; i++) {          // Execute draw rectangle based on how many displays there are
+    for (i = 0; i < numberdisplays; i++)
+    { // Execute draw rectangle based on how many displays there are
         char conv = i + 65;
         sprintf(header, "%c:", conv);
 
@@ -508,295 +540,371 @@ void DisplayChannels(void){
 
         print(10, FindCenterY(Y_start, diff_display[numberdisplays], "A:", ((numberdisplays > 5) ? 1 : 2)), header, header_color[i], BLACK, ((numberdisplays > 5) ? 1 : 2), ((numberdisplays > 5) ? 1 : 2), 239);
 
-        print(192, ((Y_start + diff_display[numberdisplays])- 21), display_unit[unit_index], WHITE, BLACK, 1, 1, 239);
-
+        print(192, ((Y_start + diff_display[numberdisplays]) - 21), display_unit[unit_index], WHITE, BLACK, 1, 1, 239);
     }
 
     // "x" for return on display screen
-    if(touch_init) {
-    print(214, 3, "x", BLACK, WHITE, 1, 1, 239);
-    Circle(219, 12, 11, BLACK);
-    // used to test centering
-    //draw_pixel(219, 12, RED);
+    if (touch_init)
+    {
+        print(214, 3, "x", BLACK, WHITE, 1, 1, 239);
+        Circle(219, 12, 11, BLACK);
+        // used to test centering
+        // draw_pixel(219, 12, RED);
     }
 
-    //current_screen = InitializationDone;
-
+    // current_screen = InitializationDone;
 }
 
-void InitYPositions(void) {
+void InitYPositions(void)
+{
     int i;
-    for (i = 0; i < 7; i++) {
+    for (i = 0; i < 7; i++)
+    {
         saved_Ypos[i] = ((additional_offset[numberdisplays - 1]) * (i + 1) +
                          (diff_display[0] + (diff_display[numberdisplays] + 6) * (i)));
     }
 }
 
-void WaitForInput(void) {
-    static int stateB1man;      // current button state SW1 (UP)
-    static int stateB2man;      // current button state SW2 (DOWN)
-    static int state_enter;     // current button state SW4 (ENTER)
-    static int state_return;    // current button state SW3 (RETURN)
-    // These are active-low, so '0' means the button is physically pressed
-    stateB1man = (gpio_get(SW1) == 0); // SW1
-    stateB2man = (gpio_get(SW2) == 0); // SW2
-    state_return = (gpio_get(SW3) == 0) || return_request_flag;     //return_request_flag used for if returning from display screen via interrupt
-    state_enter = (gpio_get(SW4) == 0);
+void WaitForInput(void)
+{
+    static bool lock_engaged = false; // acts as lock to have 1 button press, tunes out noise/adc readings from falling voltages while the capacitor discharges after a button press
+                                      // Only resets when finger fully removed and adc value falls below 600 threshold (Release Gate)
 
-    // set to 0 so it doesnt repeatedly trigger
-    if (return_request_flag) return_request_flag = 0;
+    uint16_t adc_val = adc_read();  // take adc value
 
-    // Determines if a button was pressed when compared to its previous state
-    int8_t b1_pressed     = (stateB1man > lastB1);
-    int8_t b2_pressed     = (stateB2man > lastB2);
-    int8_t enter_pressed  = (state_enter > lastEnter);
-    int8_t return_pressed = (state_return > lastReturn);
+    // manually reset buttons on each new waitforinput because theoretically each new waitforinput should be waiting for an input or processing a single one
+    int8_t b1_pressed = 0, b2_pressed = 0, enter_pressed = 0, return_pressed = 0;
 
-        switch(current_screen) {
-            // Displays LEDs, sets current_screen to next_screen Screen_TouchDecision, resets force_redraw so mainloop switch case works correctly
-            case Screen_ControlsDisplay:
-                if (enter_pressed) {
-                    current_screen = Screen_TouchDecision;
-                    force_redraw = true;
-                }
-                break;
+    // no buttons pressed if falls under 500, "unlocks"
+    if (adc_val < 500)
+    {
+        lock_engaged = false;
+    }
 
-            // Once screen changed to Screen_TouchDecision, enter UpdateTouchHighlight when a button is pressed (UP/DOWN), or go to next screen (ENTER)
-            case Screen_TouchDecision:
-                if (b1_pressed) {
-                    cursor_position = 0;
-                    UpdateTouchHighlight();
-                }
-                else if (b2_pressed) {
-                    cursor_position = 1;
-                    UpdateTouchHighlight();
-                }
+    // if lock is not engaged and adc value is above 700, we can say "a button is being pressed"
+    if (!lock_engaged && adc_val >= 700)
+    {
 
-                if (enter_pressed) {
-                    if(cursor_position == 0) {
-                        cali = 0;
-                        //touch_triggered = 0;
+        // wait for SPI noise to pass (even with filters included, SPI communication causes noise spikes)
+        sleep_ms(5);
 
-                        // in case of Disable -> Return -> Enable
-                        //P1IE &= ~BIT0;        // Disable interrupt
-                        //P1IFG &= ~BIT0;       // Clear any "stale" flag from the 'Disabled' period
+        // take a confirmation reading to ensure its not just a random spike
+        adc_val = adc_read();
 
-                        current_screen = Screen_TouchCalibration;
-                        //TouchScreeninit();    // Re-init pins and re-enable P1IE
-                    }
-                    else {
-                        current_screen = Screen_OperatingMode;
-                        // should be disabling touch screen initialization
-                        //TouchScreen_deinit();
-                    }
-                    cursor_position = 0;
-                    force_redraw = true;
-                }
-                break;
+        // button value reads at 4071, use 3725 for expected tolerance across parts, if above this threshold, ENTER is being pressed
+        if (adc_val >= 3725)
+        {
+            enter_pressed = 1;
+            lock_engaged = true;
+        }
+        // button value reads at 2780, use 2480 (low) and 2980 (high) for expected tolerance across parts, if between this threshold, RETURN is being pressed
+        else if (adc_val >= 2480 && adc_val <= 2980)
+        {
+            return_pressed = 1;
+            lock_engaged = true;
+        }
+        // button value reads at 2048, use 1737 (low) and 2234 (high) for expected tolerance across parts, if between this threshold, DOWN is being pressed
+        else if (adc_val >= 1740 && adc_val <= 2235)
+        {
+            b2_pressed = 1;
+            lock_engaged = true;
+        }
+        // button value reads at 1365, use 992 (low) and 1489 (high) for expected tolerance across parts, if between this threshold, UP is being pressed
+        else if (adc_val >= 990 && adc_val <= 1490)
+        {
+            b1_pressed = 1;
+            lock_engaged = true;
+        }
+    }
 
-            // needs to respond to touch ONLY, no button presses for calibration
-            // code at bottom will scan for X and Y coordinate values
-            // kills interrupt
-            case Screen_TouchCalibration:
-            /*
-                if(touch_triggered) {
-                    // 1. GATEKEEPER: Is the user touching the right general area?
-                    if(CaliBoundsCheckTS()) {
+    switch (current_screen)
+    {
+    // Displays LEDs, sets current_screen to next_screen Screen_TouchDecision, resets force_redraw so mainloop switch case works correctly
+    case Screen_ControlsDisplay:
+        if (enter_pressed)
+        {
+            current_screen = Screen_TouchDecision;
+            force_redraw = true;
+        }
+        break;
 
-                        if(cali == 0) {
-                            CaptureCaliCoordsTS();
+    // Once screen changed to Screen_TouchDecision, enter UpdateTouchHighlight when a button is pressed (UP/DOWN), or go to next screen (ENTER)
+    case Screen_TouchDecision:
+        if (b1_pressed)
+        {
+            cursor_position = 0;
+            UpdateTouchHighlight();
+        }
+        else if (b2_pressed)
+        {
+            cursor_position = 1;
+            UpdateTouchHighlight();
+        }
 
-                            // update cali value AFTER min values captured, update screen to indicate to user to remove finger
-                            UpdateTouchCalibration();
+        if (enter_pressed)
+        {
+            if (cursor_position == 0)
+            {
+                cali = 0;
+                // touch_triggered = 0;
 
-                            // 4. WAIT: Don't move on until the finger is gone
-                            WaitForReleaseTS();
-                            touch_triggered = 0;
+                // in case of Disable -> Return -> Enable
+                // P1IE &= ~BIT0;        // Disable interrupt
+                // P1IFG &= ~BIT0;       // Clear any "stale" flag from the 'Disabled' period
 
-                            // 5. RE-ARM: Clean up flags and re-enable interrupt
-                            //P1IFG &= ~BIT0;
-                            //P1IE |= BIT0;
-                        }
-                        else if (cali == 1) {
-                            // Repeat for the second point
-                            CaptureCaliCoordsTS();
+                current_screen = Screen_TouchCalibration;
+                // TouchScreeninit();    // Re-init pins and re-enable P1IE
+            }
+            else
+            {
+                current_screen = Screen_OperatingMode;
+                // should be disabling touch screen initialization
+                // TouchScreen_deinit();
+            }
+            cursor_position = 0;
+            force_redraw = true;
+        }
+        break;
 
-                            WaitForReleaseTS();
-                            FinishTouchCalibration();
-                            current_screen = Screen_OperatingMode;
+    // needs to respond to touch ONLY, no button presses for calibration
+    // code at bottom will scan for X and Y coordinate values
+    // kills interrupt
+    case Screen_TouchCalibration:
+        /*
+            if(touch_triggered) {
+                // 1. GATEKEEPER: Is the user touching the right general area?
+                if(CaliBoundsCheckTS()) {
 
-                            //P1IFG &= ~BIT0;
-                            touch_triggered = 0;
-                            //P1IE |= BIT0;
+                    if(cali == 0) {
+                        CaptureCaliCoordsTS();
 
-                            force_redraw = true;
-                        }
-                    }
-                    else {
-                        // FAILED BOUNDS: User touched the wrong spot.
-                        // We must still reset the flag/interrupt so they can try again.
+                        // update cali value AFTER min values captured, update screen to indicate to user to remove finger
+                        UpdateTouchCalibration();
+
+                        // 4. WAIT: Don't move on until the finger is gone
                         WaitForReleaseTS();
+                        touch_triggered = 0;
+
+                        // 5. RE-ARM: Clean up flags and re-enable interrupt
+                        //P1IFG &= ~BIT0;
+                        //P1IE |= BIT0;
+                    }
+                    else if (cali == 1) {
+                        // Repeat for the second point
+                        CaptureCaliCoordsTS();
+
+                        WaitForReleaseTS();
+                        FinishTouchCalibration();
+                        current_screen = Screen_OperatingMode;
+
                         //P1IFG &= ~BIT0;
                         touch_triggered = 0;
                         //P1IE |= BIT0;
+
+                        force_redraw = true;
                     }
                 }
-                */
-                break;
-            // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
-            // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
-            case Screen_OperatingMode: {
-                /*
-                // 1. TOUCH INPUT LOGIC
-                if (touch_triggered) {
-                    // Clear the ISR flag immediately so we don't loop on the same touch
-                    touch_triggered = 0;
-
-                    // Read fresh coordinates (this includes the settling delay internally)
-                    X_Cord = ReadTouchX();
-                    Y_Cord = ReadTouchY();
-
-                    // Only process if the touch is valid (greater than 0)
-                    if (X_Cord > 0 && Y_Cord > 0) {
-                        int i;
-                        for (i = 0; i < 5; i++) {
-                            // Logic: Start at 60Y, each box is 48px high, stepping by 52px
-                            uint16_t row_top = 60 + (52 * i);
-
-                            if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48)) {
-                                cursor_position = i;
-                                UpdateOperatingModeSelection();
-
-                                // Trigger the transition immediately
-                                enter_pressed = 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // Re-enable Port 1 Interrupt for the next physical touch
+                else {
+                    // FAILED BOUNDS: User touched the wrong spot.
+                    // We must still reset the flag/interrupt so they can try again.
+                    WaitForReleaseTS();
                     //P1IFG &= ~BIT0;
-                    //P1IE  |=  BIT0;
+                    touch_triggered = 0;
+                    //P1IE |= BIT0;
                 }
-                */
+            }
+            */
+        break;
+    // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
+    // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
+    case Screen_OperatingMode:
+    {
+        /*
+        // 1. TOUCH INPUT LOGIC
+        if (touch_triggered) {
+            // Clear the ISR flag immediately so we don't loop on the same touch
+            touch_triggered = 0;
 
-                // 2. PHYSICAL BUTTON LOGIC
-                // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
-                int8_t moved = b2_pressed - b1_pressed;
-                if (moved != 0) {
-                    cursor_position += moved;
+            // Read fresh coordinates (this includes the settling delay internally)
+            X_Cord = ReadTouchX();
+            Y_Cord = ReadTouchY();
 
-                    // Clamp bounds to the 5 available menu items (0 to 4)
-                    if (cursor_position < 0) cursor_position = 4;
-                    if (cursor_position > 4) cursor_position = 0;
+            // Only process if the touch is valid (greater than 0)
+            if (X_Cord > 0 && Y_Cord > 0) {
+                int i;
+                for (i = 0; i < 5; i++) {
+                    // Logic: Start at 60Y, each box is 48px high, stepping by 52px
+                    uint16_t row_top = 60 + (52 * i);
 
-                    UpdateOperatingModeSelection();
-                }
+                    if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48)) {
+                        cursor_position = i;
+                        UpdateOperatingModeSelection();
 
-                // 3. STATE TRANSITION LOGIC
-                if (enter_pressed) {
-                    // CRITICAL: Clear the flag so the next screen doesn't "auto-enter"
-                    enter_pressed = 0;
-
-                    if (cursor_position < 4) {
-                        // Path A: One of the 4 Presets was selected
-                        entry_method = ENTRY_PRESET;
-                        PresetConfigs(); // This function must set current_screen = InitializationDone
-                    } else {
-                        // Path B: "Custom" (Item 5) was selected
-                        entry_method = ENTRY_CUSTOM;
-                        numberdisplays = 1;
-                        current_screen = Screen_NumberDisplays;
-                        cursor_position = 0;
-                        force_redraw = true;
+                        // Trigger the transition immediately
+                        enter_pressed = 1;
+                        break;
                     }
                 }
-                else if (return_pressed) {
-                    // Clear the flag to prevent "Double Returns"
-                    return_pressed = 0;
-
-                    current_screen = Screen_TouchDecision;
-                    cali = 0;
-                    cursor_position = 0;
-                    force_redraw = true;
-                }
-                break;
             }
 
-            // Increment number of displays if SW1 pressed, decrement if SW2 pressed
-            case Screen_NumberDisplays: {
-                bool value_changed = false;
-                if (b1_pressed) { numberdisplays++; value_changed = true; }
-                if (b2_pressed) { numberdisplays--; value_changed = true; }
+            // Re-enable Port 1 Interrupt for the next physical touch
+            //P1IFG &= ~BIT0;
+            //P1IE  |=  BIT0;
+        }
+        */
 
-                if (value_changed) {
-                    numberdisplays = (numberdisplays > 7) ? 1 : (numberdisplays < 1 ? 7 : numberdisplays);
-                    UpdateNumberOfDisplays();
-                }
+        // 2. PHYSICAL BUTTON LOGIC
+        // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
+        int8_t moved = b2_pressed - b1_pressed;
+        if (moved != 0)
+        {
+            cursor_position += moved;
 
-                if (enter_pressed) {
-                    j_idx = 1;              // Start at Display A
-                    numberchannels = 1;     // Start at channel 1
-                    current_screen = Screen_ChannelSelection;
-                    force_redraw = true;
-                }
-                else if (return_pressed) {
-                    current_screen = Screen_OperatingMode;
-                    force_redraw = true;
-                }
-                break;
-            }
+            // Clamp bounds to the 5 available menu items (0 to 4)
+            if (cursor_position < 0)
+                cursor_position = 4;
+            if (cursor_position > 4)
+                cursor_position = 0;
 
-            // Increment channel selection if SW1 pressed, decrement if SW2 pressed
-            case Screen_ChannelSelection: {
-                bool value_changed = false;
-                if (b1_pressed) { numberchannels++; value_changed = true; }
-                if (b2_pressed) { numberchannels--; value_changed = true; }
-
-                if (value_changed) {
-                    numberchannels = (numberchannels > 7) ? 1 : (numberchannels < 1 ? 7 : numberchannels);
-                    UpdateChannelSelection();
-                }
-
-                // if enter pressed, increment j_idx to go to next display
-                if (enter_pressed) {
-                    if (j_idx < numberdisplays) {
-                        j_idx++;
-                        numberchannels = 1;
-                        UpdateChannelSelection();
-                    } else {
-                        current_screen = Screen_DisplayChannels;
-                        force_redraw = true;
-                    }
-                }
-                else if (return_pressed) {
-                    if (j_idx > 1) {
-                        j_idx--;
-                        numberchannels = 1;
-
-                        // wrap in conditional statement to prevent random black box being drawn for j_idx = 6 (out of array bounds)
-                        if (idx < 6) {
-                            Rectf(FindCenterX(xcord[idx], 100, "0", 1),
-                                  FindCenterY(ycord[idx] - (touch_init * 40), 42 - (touch_init * 6), "0", 1),
-                                  14, 20, BLACK);
-                        }
-
-                        UpdateChannelSelection();
-                    } else {
-                        current_screen = Screen_NumberDisplays;
-                        force_redraw = true;
-                    }
-                }
-                break;
-            }
+            UpdateOperatingModeSelection();
         }
 
+        // 3. STATE TRANSITION LOGIC
+        if (enter_pressed)
+        {
+            // CRITICAL: Clear the flag so the next screen doesn't "auto-enter"
+            enter_pressed = 0;
+
+            if (cursor_position < 4)
+            {
+                // Path A: One of the 4 Presets was selected
+                entry_method = ENTRY_PRESET;
+                PresetConfigs(); // This function must set current_screen = InitializationDone
+            }
+            else
+            {
+                // Path B: "Custom" (Item 5) was selected
+                entry_method = ENTRY_CUSTOM;
+                numberdisplays = 1;
+                current_screen = Screen_NumberDisplays;
+                cursor_position = 0;
+                force_redraw = true;
+            }
+        }
+        else if (return_pressed)
+        {
+            // Clear the flag to prevent "Double Returns"
+            return_pressed = 0;
+
+            current_screen = Screen_TouchDecision;
+            cali = 0;
+            cursor_position = 0;
+            force_redraw = true;
+        }
+        break;
+    }
+
+    // Increment number of displays if SW1 pressed, decrement if SW2 pressed
+    case Screen_NumberDisplays:
+    {
+        bool value_changed = false;
+        if (b1_pressed)
+        {
+            numberdisplays++;
+            value_changed = true;
+        }
+        if (b2_pressed)
+        {
+            numberdisplays--;
+            value_changed = true;
+        }
+
+        if (value_changed)
+        {
+            numberdisplays = (numberdisplays > 7) ? 1 : (numberdisplays < 1 ? 7 : numberdisplays);
+            UpdateNumberOfDisplays();
+        }
+
+        if (enter_pressed)
+        {
+            j_idx = 1;          // Start at Display A
+            numberchannels = 1; // Start at channel 1
+            current_screen = Screen_ChannelSelection;
+            force_redraw = true;
+        }
+        else if (return_pressed)
+        {
+            current_screen = Screen_OperatingMode;
+            force_redraw = true;
+        }
+        break;
+    }
+
+    // Increment channel selection if SW1 pressed, decrement if SW2 pressed
+    case Screen_ChannelSelection:
+    {
+        bool value_changed = false;
+        if (b1_pressed)
+        {
+            numberchannels++;
+            value_changed = true;
+        }
+        if (b2_pressed)
+        {
+            numberchannels--;
+            value_changed = true;
+        }
+
+        if (value_changed)
+        {
+            numberchannels = (numberchannels > 7) ? 1 : (numberchannels < 1 ? 7 : numberchannels);
+            UpdateChannelSelection();
+        }
+
+        // if enter pressed, increment j_idx to go to next display
+        if (enter_pressed)
+        {
+            if (j_idx < numberdisplays)
+            {
+                j_idx++;
+                numberchannels = 1;
+                UpdateChannelSelection();
+            }
+            else
+            {
+                current_screen = Screen_DisplayChannels;
+                force_redraw = true;
+            }
+        }
+        else if (return_pressed)
+        {
+            if (j_idx > 1)
+            {
+                j_idx--;
+                numberchannels = 1;
+
+                // wrap in conditional statement to prevent random black box being drawn for j_idx = 6 (out of array bounds)
+                if (idx < 6)
+                {
+                    Rectf(FindCenterX(xcord[idx], 100, "0", 1),
+                          FindCenterY(ycord[idx] - (touch_init * 40), 42 - (touch_init * 6), "0", 1),
+                          14, 20, BLACK);
+                }
+
+                UpdateChannelSelection();
+            }
+            else
+            {
+                current_screen = Screen_NumberDisplays;
+                force_redraw = true;
+            }
+        }
+        break;
+    }
+    }
+
     // update the 'previous state' trackers for the next loop pass
-    lastB1 = stateB1man;
-    lastB2 = stateB2man;
-    lastEnter = state_enter;
-    lastReturn = state_return;
-    
+
     /*
     // LEDs and cursor used for tracking touch, not included in final implementation
     if(current_screen != Screen_TouchCalibration) {

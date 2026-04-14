@@ -56,14 +56,14 @@ int main()
 
     LCDSetup();
 
-    
     // ---------------------------------------------------------
     // MASTER LOOP: This allows "Soft Resets" to return to menu
     // ---------------------------------------------------------
-    
-    
+
     while (1)
     {
+
+        
         // PHASE 1: UI SETUP DISPATCHER
         // Runs until current_screen == InitializationDone
         while (current_screen != InitializationDone)
@@ -105,5 +105,7 @@ int main()
             }
             WaitForInput(); // Now detects the Soft Return flag
         }
+            
     }
+    
 }

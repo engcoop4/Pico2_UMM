@@ -5,18 +5,17 @@
 #include "hardware/spi.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
+#include "hardware/adc.h"
 
 // --- SPI Configuration ---
 // Replaces SMCLK_init and UCB1 configurations
 #define SPI_PORT spi1               // determines spi0 or spi1 (must be spi1 for Ethernet)
-#define SPI_BAUD_RATE (40 * 1000 * 1000)      //  for testing (pretty fast)
+#define SPI_BAUD_RATE (40 * 1000 * 1000)      // 40MHz for testing (pretty fast)
 
 // --- Buttons ---
 // make sure to use corresponding GP number, not just pin number (e.g., GPIO 2 is pin 4 on the board)
-#define SW1 2
-#define SW2 3
-#define SW3 4
-#define SW4 5
+// need ONE switch set to GPIO 28 (ADC2)
+#define SWLADDER 28 // SW1, GPIO 28, ADC2
 
 void Buttons_Init(void);
 

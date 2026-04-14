@@ -1,7 +1,14 @@
 #include "Hardware.h"
 
+
 void Buttons_Init(void)
 {
+    adc_init();
+
+    adc_gpio_init(SWLADDER);
+
+    adc_select_input(2);
+    /*
     // same as setting them using: gpio_set_function(SW1, GPIO_FUNC_SIO) (SIO == Simple Input/Output)
     gpio_init(SW1);
     gpio_init(SW2);
@@ -18,7 +25,9 @@ void Buttons_Init(void)
     gpio_pull_up(SW2);
     gpio_pull_up(SW3);
     gpio_pull_up(SW4);
+    */
 }
+    
 
 void LEDs_Init(void)
 {
