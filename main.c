@@ -56,15 +56,12 @@ int main()
 
     LCDSetup();
 
-    // ---------------------------------------------------------
-    // MASTER LOOP: This allows "Soft Resets" to return to menu
-    // ---------------------------------------------------------
+    /* ----- MAIN LOOP ----- */
 
     while (1)
     {
 
-        // PHASE 1: UI SETUP DISPATCHER
-        // Runs until current_screen == InitializationDone
+        // runs until current_screen == InitializationDone (changes in DisplayChannels)
         while (current_screen != InitializationDone)
         {
             /*

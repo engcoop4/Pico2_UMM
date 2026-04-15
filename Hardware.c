@@ -41,6 +41,7 @@ void LEDs_Init(void)
     gpio_set_dir(LED3, GPIO_OUT);
     gpio_set_dir(LED4, GPIO_OUT);
 
+    // LEDs are active low, so setting them high turns them off by default
     gpio_put(LED1, 1);
     gpio_put(LED2, 1);
     gpio_put(LED3, 1);
