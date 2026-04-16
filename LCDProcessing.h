@@ -264,6 +264,10 @@
 #define DISPCHAN_EXIT_CIRCLE_T_Y 12
 #define DISPCHAN_EXIT_CIRCLE_R 11
 
+// InitYPositions
+#define Y_POS_POSSIBILITES 7
+#define Y_POS_OFF 6
+
 extern int diff_display[8];
 extern int16_t saved_Ypos[7];
 extern uint8_t LCD_ch_source[7];

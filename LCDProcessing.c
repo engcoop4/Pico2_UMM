@@ -473,9 +473,9 @@ void UpdateChannelSelection(void)
     {
         char chan_sel[4];
         itoa(numberchannels, chan_sel, 10);
-        print(FindCenterX(xcord[idx], U_CHANSEL_SBOX_PRINT_W, "0", 1),
-              FindCenterY(ycord[idx] - (touch_init * U_CHANSEL_SBOX_PRINT_Y_T_F), U_CHANSEL_SBOX_PRINT_H - (touch_init * U_CHANSEL_SBOX_PRINT_H_T_F), "0", 1),
-              chan_sel, WHITE, BLACK, 1, 1, 239);
+        print(FindCenterX(xcord[idx], U_CHANSEL_SBOX_PRINT_W, "0", FONT_1),
+              FindCenterY(ycord[idx] - (touch_init * U_CHANSEL_SBOX_PRINT_Y_T_F), U_CHANSEL_SBOX_PRINT_H - (touch_init * U_CHANSEL_SBOX_PRINT_H_T_F), "0", FONT_1),
+              chan_sel, WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
 }
 
@@ -560,10 +560,10 @@ void DisplayChannels(void)
 void InitYPositions(void)
 {
     int i;
-    for (i = 0; i < 7; i++)
+    for (i = 0; i < Y_POS_POSSIBILITES; i++)
     {
         saved_Ypos[i] = ((additional_offset[numberdisplays - 1]) * (i + 1) +
-                         (diff_display[0] + (diff_display[numberdisplays] + 6) * (i)));
+                         (diff_display[0] + (diff_display[numberdisplays] + Y_POS_OFF) * (i)));
     }
 }
 
