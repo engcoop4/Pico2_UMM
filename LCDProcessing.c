@@ -121,20 +121,20 @@ void LCDSetup(void)
 void ButtonLayout(void)
 {
     // Controlled by SW1
-    Rectf(6, 178, 100, 25, YELLOW);
-    print(FindCenterX(6, 100, buttons[0], 1), FindCenterY(178, 25, buttons[0], 1), buttons[0], BLACK, YELLOW, 1, 1, 239);
+    Rectf(BUT_X_START_A, BUT_Y_START_A, BUT_W, BUT_H, YELLOW);
+    print(FindCenterX(BUT_X_START_A, BUT_W, buttons[0], FONT_1), FindCenterY(BUT_Y_START_A, BUT_H, buttons[0], FONT_1), buttons[0], BLACK, YELLOW, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     // Controlled by SW2
-    Rectf(133, 178, 100, 25, GREEN);
-    print(FindCenterX(133, 100, buttons[1], 1), FindCenterY(178, 25, buttons[1], 1), buttons[1], BLACK, GREEN, 1, 1, 231);
+    Rectf(BUT_X_START_B, BUT_Y_START_A, BUT_W, BUT_H, GREEN);
+    print(FindCenterX(BUT_X_START_B, BUT_W, buttons[1], FONT_1), FindCenterY(BUT_Y_START_A, BUT_H, buttons[1], FONT_1), buttons[1], BLACK, GREEN, FONT_1, FONT_1, SCREEN_EDGE_X_HEAD);
 
     // Controlled by SW4
-    Rectf(6, 255, 100, 25, WHITE);
-    print(FindCenterX(6, 100, buttons[2], 1), FindCenterY(255, 25, buttons[2], 1), buttons[2], BLACK, WHITE, 1, 1, 239);
+    Rectf(BUT_X_START_A, BUT_Y_START_B, BUT_W, BUT_H, WHITE);
+    print(FindCenterX(BUT_X_START_A, BUT_W, buttons[2], FONT_1), FindCenterY(BUT_Y_START_B, BUT_H, buttons[2], FONT_1), buttons[2], BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     // Controlled by SW3
-    Rectf(133, 255, 100, 25, RED);
-    print(FindCenterX(133, 100, buttons[3], 1), FindCenterY(255, 25, buttons[3], 1), buttons[3], BLACK, RED, 1, 1, 231);
+    Rectf(BUT_X_START_B, BUT_Y_START_B, BUT_W, BUT_H, RED);
+    print(FindCenterX(BUT_X_START_B, BUT_W, buttons[3], FONT_1), FindCenterY(BUT_Y_START_B, BUT_H, buttons[3], FONT_1), buttons[3], BLACK, RED, FONT_1, FONT_1, SCREEN_EDGE_X_HEAD);
 
     return;
 }
@@ -145,21 +145,21 @@ void ControlsDisplay(void)
     LCD_Clear(BLACK);
 
     // Header
-    Rectf(6, 0, 227, 25, WHITE);
-    print(FindCenterX(6, 231, "MENU - CONTROLS", 1), FindCenterY(0, 25, "MENU - CONTROLS", 1), "MENU - CONTROLS", BLACK, WHITE, 1, 1, 231);
+    Rectf(CONT_HEAD_X, CONT_HEAD_Y, CONT_HEAD_W, CONT_HEAD_H, WHITE);
+    print(FindCenterX(CONT_HEAD_X, CONT_HEAD_W + CONT_HEAD_X, "MENU - CONTROLS", FONT_1), FindCenterY(CONT_HEAD_Y, CONT_HEAD_H, "MENU - CONTROLS", FONT_1), "MENU - CONTROLS", BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X_HEAD);
 
     // LED Labels
-    Rectf(6, 30, 100, 25, WHITE);
-    print(FindCenterX(6, 100, LEDs[0], 1), FindCenterY(30, 25, LEDs[0], 1), LEDs[0], BLACK, WHITE, 1, 1, 239);
+    Rectf(CONT_LED_X_START_A, CONT_LED_Y_START_A, CONT_LED_W, CONT_LED_H, WHITE);
+    print(FindCenterX(CONT_LED_X_START_A, CONT_LED_W, LEDs[0], FONT_1), FindCenterY(CONT_LED_Y_START_A, CONT_LED_H, LEDs[0], FONT_1), LEDs[0], BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
-    Rectf(133, 30, 100, 25, WHITE);
-    print(FindCenterX(133, 100, LEDs[1], 1), FindCenterY(30, 25, LEDs[1], 1), LEDs[1], BLACK, WHITE, 1, 1, 231);
+    Rectf(CONT_LED_X_START_B, CONT_LED_Y_START_A, CONT_LED_W, CONT_LED_H, WHITE);
+    print(FindCenterX(CONT_LED_X_START_B, CONT_LED_W, LEDs[1], FONT_1), FindCenterY(CONT_LED_Y_START_A, CONT_LED_H, LEDs[1], FONT_1), LEDs[1], BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X_HEAD);
 
-    Rectf(6, 70, 100, 25, WHITE);
-    print(FindCenterX(6, 100, LEDs[2], 1), FindCenterY(70, 25, LEDs[2], 1), LEDs[2], BLACK, WHITE, 1, 1, 239);
+    Rectf(CONT_LED_X_START_A, CONT_LED_Y_START_B, CONT_LED_W, CONT_LED_H, WHITE);
+    print(FindCenterX(CONT_LED_X_START_A, CONT_LED_W, LEDs[2], FONT_1), FindCenterY(CONT_LED_Y_START_B, CONT_LED_H, LEDs[2], FONT_1), LEDs[2], BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
-    Rectf(133, 70, 100, 25, WHITE);
-    print(FindCenterX(133, 100, LEDs[3], 1), FindCenterY(70, 25, LEDs[3], 1), LEDs[3], BLACK, WHITE, 1, 1, 231);
+    Rectf(CONT_LED_X_START_B, CONT_LED_Y_START_B, CONT_LED_W, CONT_LED_H, WHITE);
+    print(FindCenterX(CONT_LED_X_START_B, CONT_LED_W, LEDs[3], FONT_1), FindCenterY(CONT_LED_Y_START_B, CONT_LED_H, LEDs[3], FONT_1), LEDs[3], BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X_HEAD);
 
     // ButtonLayout();
 }
@@ -171,27 +171,27 @@ void TouchScreenDecision(void)
     LCD_Clear(BLACK);
 
     // Header
-    Rectf(6, 6, 227, 72, WHITE);
-    print(FindCenterX(6, 227, "SCREEN SETTINGS", 1), FindCenterY(6, 72, "SCREEN SETTINGS", 1), "SCREEN SETTINGS", BLACK, WHITE, 1, 1, 239);
+    Rectf(T_HEAD_X, T_HEAD_Y, T_HEAD_W, T_HEAD_H, WHITE);
+    print(FindCenterX(T_HEAD_X, T_HEAD_W, "SCREEN SETTINGS", FONT_1), FindCenterY(T_HEAD_Y, T_HEAD_H, "SCREEN SETTINGS", FONT_1), "SCREEN SETTINGS", BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
-    print(FindCenterX(0, 239, "Touch Screen?", 1), FindCenterY(78, 86, "Touch Screen?", 1), "Touch Screen?", WHITE, BLACK, 1, 1, 239);
+    print(FindCenterX(T_PROMPT_X, T_PROMPT_W, "Touch Screen?", FONT_1), FindCenterY(T_PROMPT_Y, T_PROMPT_H, "Touch Screen?", FONT_1), "Touch Screen?", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
 
-    Rectf(6, 164, 227, 52, GREEN);
-    print(FindCenterX(6, 227, "ENABLE", 1), FindCenterY(164, 52, "ENABLE", 1), "ENABLE", BLACK, GREEN, 1, 1, 239);
+    Rectf(T_ENAB_X, T_ENAB_Y, T_ENAB_W, T_ENAB_H, GREEN);
+    print(FindCenterX(T_ENAB_X, T_ENAB_W, "ENABLE", FONT_1), FindCenterY(T_ENAB_Y, T_ENAB_H, "ENABLE", FONT_1), "ENABLE", BLACK, GREEN, FONT_1, FONT_1, SCREEN_EDGE_X);
 
-    Rectf(6, 245, 227, 52, RED);
-    print(FindCenterX(6, 227, "DISABLE", 1), FindCenterY(245, 52, "DISABLE", 1), "DISABLE", BLACK, RED, 1, 1, 239);
+    Rectf(T_DIS_X, T_DIS_Y, T_DIS_W, T_DIS_H, RED);
+    print(FindCenterX(T_DIS_X, T_DIS_W, "DISABLE", FONT_1), FindCenterY(T_DIS_Y, T_DIS_H, "DISABLE", FONT_1), "DISABLE", BLACK, RED, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     // Initial highlight based on current cursor_position
-    if (cursor_position == 0)
+    if (!cursor_position)
     {
-        Rect(6, 163, 227, 53, WHITE);
-        Rect(6, 244, 227, 53, BLACK);
+        Rect(T_ENAB_X, T_ENAB_Y - 1, T_ENAB_W, T_ENAB_H + 1, WHITE);
+        Rect(T_DIS_X, T_DIS_Y - 1, T_DIS_W, T_DIS_H + 1, BLACK);
     }
     else
     {
-        Rect(6, 244, 227, 53, WHITE);
-        Rect(6, 163, 227, 53, BLACK);
+        Rect(T_DIS_X, T_DIS_Y - 1, T_DIS_W, T_DIS_H + 1, WHITE);
+        Rect(T_ENAB_X, T_ENAB_Y - 1, T_ENAB_W, T_ENAB_H + 1, BLACK);
     }
     UpdateTouchHighlight();
 }
@@ -200,15 +200,15 @@ void TouchScreenDecision(void)
 void UpdateTouchHighlight(void)
 {
 
-    if (cursor_position == 0)
+    if (!cursor_position)
     {
-        Rect(6, 163, 227, 53, WHITE);
-        Rect(6, 244, 227, 53, BLACK);
+        Rect(T_ENAB_X, T_ENAB_Y - 1, T_ENAB_W, T_ENAB_H + 1, WHITE);
+        Rect(T_DIS_X, T_DIS_Y - 1, T_DIS_W, T_DIS_H + 1, BLACK);
     }
     else
     {
-        Rect(6, 163, 227, 53, BLACK);
-        Rect(6, 244, 227, 53, WHITE);
+        Rect(T_DIS_X, T_DIS_Y - 1, T_DIS_W, T_DIS_H + 1, WHITE);
+        Rect(T_ENAB_X, T_ENAB_Y - 1, T_ENAB_W, T_ENAB_H + 1, BLACK);
     }
 }
 
@@ -218,22 +218,22 @@ void TouchCalibration(void)
     LCD_Clear(BLACK);
     cali = 0;
 
-    print_centered(FindCenterY(0, 319, "PRESS CIRCLE TO START CALIBRATION", 1),
-                   "PRESS CIRCLE TO START CALIBRATION", WHITE, BLACK, 1, 1, 239);
+    print_centered(FindCenterY(CALI_PROMPT_X, CALI_SCREEN_EDGE, "PRESS CIRCLE TO CALIBRATE", FONT_1),
+                   "PRESS CIRCLE TO CALIBRATE", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     // first calibration circle
-    Circlef(15, 15, 15, RED);
-    Circle(15, 15, 15, WHITE);
+    Circlef(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, RED);
+    Circle(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, WHITE);
 }
 
 void UpdateTouchCalibration(void)
 {
     cali = 1;
-    Rectf(0, 0, 35, 35, BLACK);
+    Rectf(CIRCLE_ONE_ERASE_X_START, CIRCLE_ONE_ERASE_Y_START, CIRCLE_ONE_ERASE_W, CIRCLE_ONE_ERASE_H, BLACK);
 
     // second calibration circle
-    Circlef(223, 303, 15, RED);
-    Circle(223, 303, 15, WHITE);
+    Circlef(CALI_CIRCLE_TWO_X, CALI_CIRCLE_TWO_Y, CALI_CIRCLE_TWO_R, RED);
+    Circle(CALI_CIRCLE_TWO_X, CALI_CIRCLE_TWO_Y, CALI_CIRCLE_TWO_R, WHITE);
 
     // TouchScreenReset();
 }
@@ -241,10 +241,10 @@ void UpdateTouchCalibration(void)
 void FinishTouchCalibration(void)
 {
 
-    Rectf(0, 130, 239, 190, BLACK);
+    Rectf(CALI_SCREEN_ERASE_X, CALI_SCREEN_ERASE_Y, CALI_SCREEN_ERASE_W, CALI_SCREEN_ERASE_H, BLACK);
 
-    print_centered(FindCenterY(0, 319, "CALIBRATION COMPLETE", 1),
-                   "CALIBRATION COMPELTE", WHITE, BLACK, 1, 1, 239);
+    print_centered(FindCenterY(CALI_PROMPT_X, CALI_SCREEN_EDGE, "CALIBRATION COMPLETE", FONT_1),
+                   "CALIBRATION COMPELTE", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
@@ -255,22 +255,22 @@ void OperatingMode(void)
     LCD_Clear(BLACK);
 
     // Draw Header
-    Rectf(6, 6, 227, 50, WHITE);
-    print(FindCenterX(6, 231, "Operating Mode", 1),
-          FindCenterY(6, 50, "Operating Mode", 1),
-          "Operating Mode", BLACK, WHITE, 1, 1, 239);
+    Rectf(OPER_MODE_HEAD_X, OPER_MODE_HEAD_Y, OPER_MODE_HEAD_W, OPER_MODE_HEAD_H, WHITE);
+    print(FindCenterX(OPER_MODE_HEAD_X, OPER_MODE_HEAD_W, "Operating Mode", FONT_1),
+          FindCenterY(OPER_MODE_HEAD_Y, OPER_MODE_HEAD_H, "Operating Mode", FONT_1),
+          "Operating Mode", BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     // Draw the 5 Operating Mode Boxes
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < NUMBER_OF_MODES; i++)
     {
-        Rectf(6, (60 + (i * 52)), 227, 48, box_color[i]);
-        print(FindCenterX(6, 227, title[i], 1),
-              FindCenterY((60 + (i * 52)), 48, title[i], 1),
-              title[i], WHITE, box_color[i], 1, 1, 239);
+        Rectf(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (i * VARIABLE_FOR_BOX_Y_OFF)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, box_color[i]);
+        print(FindCenterX(OPER_MODE_BOX_X, OPER_MODE_BOX_W, title[i], FONT_1),
+              FindCenterY((OPER_MODE_BOX_Y_STARTING_OFF + (i * VARIABLE_FOR_BOX_Y_OFF)), OPER_MODE_BOX_H, title[i], FONT_1),
+              title[i], WHITE, box_color[i], FONT_1, FONT_1, SCREEN_EDGE_X);
     }
 
     // Draw the cursor highlight at its current position
-    Rect(6, 60 + (52 * cursor_position), 227, 48, WHITE);
+    Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
 }
 
 void UpdateOperatingModeSelection(void)
@@ -278,13 +278,13 @@ void UpdateOperatingModeSelection(void)
     int i;
     // 1. Draw a "Neutral" state (Black boxes) over the highlight areas
     // This effectively "erases" the old white selection border
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < NUMBER_OF_MODES; i++)
     {
 
-        Rect(6, 60 + (52 * i), 227, 48, BLACK);
+        Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * i)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, BLACK);
     }
 
-    Rect(6, 60 + (52 * cursor_position), 227, 48, WHITE);
+    Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
     title_index = cursor_position;
 }
 
@@ -294,21 +294,21 @@ void NumberOfDisplays(void)
 {
     LCD_Clear(BLACK);
 
-    Rectf(6, 6, 227, 50, WHITE);
-    print(FindCenterX(6, 227, "Number of Displays", 1),
-          FindCenterY(6, 50, "Number of Displays", 1),
-          "Number of Displays", BLACK, WHITE, 1, 1, 239);
+    Rectf(NUMD_HEAD_X, NUMD_HEAD_Y, NUMD_HEAD_W, NUMD_HEAD_H, WHITE);
+    print(FindCenterX(NUMD_HEAD_X, NUMD_HEAD_W, "Number of Displays", FONT_1),
+          FindCenterY(NUMD_HEAD_Y, NUMD_HEAD_H, "Number of Displays", FONT_1),
+          "Number of Displays", BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     if (touch_init)
     {
-        Rectf(6, 61, 227, 188, WHITE);
-        // ENTER
-        Rectf(6, 255, 100, 50, RED);
-        print(FindCenterX(6, 100, buttons[3], 1), FindCenterY(255, 50, buttons[3], 1), buttons[3], BLACK, RED, 1, 1, 239);
-
+        Rectf(NUMD_T_X, NUMD_T_Y, NUMD_T_W, NUMD_T_H, WHITE);
         // RETURN
-        Rectf(133, 255, 100, 50, GREEN);
-        print(FindCenterX(133, 100, buttons[1], 1), FindCenterY(255, 50, buttons[1], 1), buttons[1], BLACK, GREEN, 1, 1, 231);
+        Rectf(NUMD_T_RETURN_X, NUMD_T_RETURN_Y, NUMD_T_BUT_W, NUMD_T_BUT_H, RED);
+        print(FindCenterX(NUMD_T_RETURN_X, NUMD_T_BUT_W, buttons[3], FONT_1), FindCenterY(NUMD_T_RETURN_Y, NUMD_T_BUT_H, buttons[3], FONT_1), buttons[3], BLACK, RED, FONT_1, FONT_1, SCREEN_EDGE_X);
+
+        // ENTER
+        Rectf(NUMD_T_ENTER_X, NUMD_T_ENTER_Y, NUMD_T_BUT_W, NUMD_T_BUT_H, GREEN);
+        print(FindCenterX(NUMD_T_ENTER_X, NUMD_T_BUT_W, buttons[1], FONT_1), FindCenterY(NUMD_T_ENTER_Y, NUMD_T_BUT_H, buttons[1], FONT_1), buttons[1], BLACK, GREEN, FONT_1, FONT_1, SCREEN_EDGE_X);
 
         /*
         // UP AND DOWN ARROWS (+1 UP, -1 DOWN)
@@ -317,12 +317,12 @@ void NumberOfDisplays(void)
         */
 
         // LEFT AND RIGHT ARROWS (+1 RIGHT, -1 LEFT)
-        Trianglef(10, 155, 30, 175, 30, 135, RED);
-        Trianglef(229, 155, 209, 175, 209, 135, RED);
+        Trianglef(NUMD_LEFT_TRI_X1, NUMD_LEFT_TRI_Y1, NUMD_LEFT_TRI_X2, NUMD_LEFT_TRI_Y2, NUMD_LEFT_TRI_X3, NUMD_LEFT_TRI_Y3, RED);
+        Trianglef(NUMD_RIGHT_TRI_X1, NUMD_RIGHT_TRI_Y1, NUMD_RIGHT_TRI_X2, NUMD_RIGHT_TRI_Y2, NUMD_RIGHT_TRI_X3, NUMD_RIGHT_TRI_Y3, RED);
     }
     else
     {
-        Rectf(6, 61, 227, 257, WHITE);
+        Rectf(NUMD_NT_X, NUMD_NT_Y, NUMD_NT_W, NUMD_NT_H, WHITE);
     }
 
     UpdateNumberOfDisplays();
@@ -336,36 +336,31 @@ void UpdateNumberOfDisplays(void)
     // if touch enabled, screen is shorter to account for ENTER/RETURN buttons
     if (touch_init)
     {
-        y = 194;
+        y = U_NUMD_CLEAR_H_T;
     }
     else
-        y = 258;
+        y = U_NUMD_CLEAR_H_NT;
 
     // need to make the find enter y dynamic
     sprintf(display, "%d", numberdisplays);
-    print(FindCenterX(0, 239, "1", 3),
-          FindCenterY(61, y, "1", 3),
-          display, RED, WHITE, 3, 3, 239);
+    print(FindCenterX(U_NUMD_CLEAR_X, U_NUMD_CLEAR_W, "1", FONT_3),
+          FindCenterY(U_NUMD_CLEAR_Y, y, "1", FONT_3),
+          display, RED, WHITE, FONT_3, FONT_3, SCREEN_EDGE_X);
 }
 
 // modify to have condensed screen if touch_init initialized (use touch_init * [factor]) to adjust bounds ?, 0 means no bounds adjustment, 1 means bounds adjustment)
 void ChannelSelection(void)
 {
-    static const int W = 100;
-    static const int H = 42;
-    static const int startX = 6;
-    static const int startY = 179;
-
     LCD_Clear(BLACK);
 
     lcd_change = 1;
 
-    Rectf(6, 6, 227, 50 - (touch_init * 20), WHITE);
-    Rectf(6, 61 - (touch_init * 20), 227, 113 - (touch_init * 20), WHITE);
+    Rectf(CHANSEL_HEAD_X, CHANSEL_HEAD_Y, CHANSEL_HEAD_W, CHANSEL_HEAD_START_H - (touch_init * CHANSEL_HEAD_T_F), WHITE);
+    Rectf(CHANSEL_BOX_X, CHANSEL_BOX_Y_STARTING_OFF - (touch_init * CHANSEL_BOX_T_F), CHANSEL_BOX_W, CHANSEL_BOX_START_H - (touch_init * CHANSEL_BOX_T_F), WHITE);
 
-    print(FindCenterX(6, 227, "Channel Selection", 1),
-          FindCenterY(6, 50 - (touch_init * 20), "Channel Selection", 1),
-          "Channel Selection", BLACK, WHITE, 1, 1, 239);
+    print(FindCenterX(CHANSEL_BOX_X, CHANSEL_BOX_W, "Channel Selection", FONT_1),
+          FindCenterY(CHANSEL_BOX_X, CHANSEL_HEAD_START_H - (touch_init * CHANSEL_HEAD_T_F), "Channel Selection", FONT_1),
+          "Channel Selection", BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
 
     num_boxes = numberdisplays - 1;
     for (sync_chan = 0; sync_chan < num_boxes; sync_chan++)
@@ -373,28 +368,28 @@ void ChannelSelection(void)
         int col = sync_chan % 2;
         int row = sync_chan / 2;
 
-        x = startX + (col * (W + 27));
-        y = startY + (row * (H + 5));
+        x = startX + (col * (W + CHANSEL_W_OFF));
+        y = startY + (row * (H + CHANSEL_H_OFF));
 
         /* Controls small boxes at bottom of screen */
-        Rect(x, y - (touch_init * 40), 100, 42 - (touch_init * 6), WHITE);
-        print(x + 5, FindCenterY(y - (touch_init * 40), 42 - (touch_init * 6), syncbox[sync_chan], 1),
-              syncbox[sync_chan], header_color[sync_chan], BLACK, 1, 1, 239);
+        Rect(x, y - (touch_init * CHANSEL_SBOX_Y_T_F), CHANSEL_SBOX_W, CHANSEL_SBOX_START_H - (touch_init * CHANSEL_SBOX_H_T_F), WHITE);
+        print(x + CHANSEL_PRINT_OFF_X, FindCenterY(y - (touch_init * CHANSEL_SBOX_Y_T_F), CHANSEL_SBOX_START_H - (touch_init * CHANSEL_SBOX_H_T_F), syncbox[sync_chan], FONT_1),
+              syncbox[sync_chan], header_color[sync_chan], BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
 
     // Enter and Return buttons on bottom of screen for touch
     if (touch_init)
     {
-        Rectf(6, 279, 100, 36, RED);
-        Rectf(133, 279, 100, 36, GREEN);
-        print(FindCenterX(6, 100, "RETURN", 1), FindCenterY(279, 36, "RETURN", 1), "RETURN", BLACK, RED, 1, 1, 239);
-        print(FindCenterX(133, 100, "ENTER", 1), FindCenterY(279, 36, "ENTER", 1), "ENTER", BLACK, GREEN, 1, 1, 239);
+        Rectf(CHANSEL_TOUCH_RETURN_X, CHANSEL_TOUCH_RETURN_Y, CHANSEL_TOUCH_BUTTON_W, CHANSEL_TOUCH_BUTTON_H, RED);
+        Rectf(CHANSEL_TOUCH_ENTER_X, CHANSEL_TOUCH_ENTER_Y, CHANSEL_TOUCH_BUTTON_W, CHANSEL_TOUCH_BUTTON_H, GREEN);
+        print(FindCenterX(CHANSEL_TOUCH_RETURN_X, CHANSEL_TOUCH_BUTTON_W, "RETURN", FONT_1), FindCenterY(CHANSEL_TOUCH_RETURN_Y, CHANSEL_TOUCH_BUTTON_H, "RETURN", FONT_1), "RETURN", BLACK, RED, FONT_1, FONT_1, SCREEN_EDGE_X);
+        print(FindCenterX(CHANSEL_TOUCH_ENTER_X, CHANSEL_TOUCH_BUTTON_W, "ENTER", FONT_1), FindCenterY(CHANSEL_TOUCH_ENTER_Y, CHANSEL_TOUCH_BUTTON_H, "ENTER", FONT_1), "ENTER", BLACK, GREEN, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
 
     if (touch_init)
     {
-        Trianglef(11, 89, 31, 109, 31, 69, RED);
-        Trianglef(228, 89, 208, 109, 208, 69, RED);
+        Trianglef(CHANSEL_LEFT_TRI_X1, CHANSEL_LEFT_TRI_Y1, CHANSEL_LEFT_TRI_X2, CHANSEL_LEFT_TRI_Y2, CHANSEL_LEFT_TRI_X3, CHANSEL_LEFT_TRI_Y3, RED);
+        Trianglef(CHANSEL_RIGHT_TRI_X1, CHANSEL_RIGHT_TRI_Y1, CHANSEL_RIGHT_TRI_X2, CHANSEL_RIGHT_TRI_Y2, CHANSEL_RIGHT_TRI_X3, CHANSEL_RIGHT_TRI_Y3, RED);
     }
 
     UpdateChannelSelection();
@@ -419,13 +414,17 @@ void UpdateChannelSelection(void)
     int number_changed = (numberchannels != last_num);
 
     idx = j_idx - 1;
-    conv = j_idx + 64;
+    conv = j_idx + U_CHANSEL_J_IDX_OFF;
 
     // handles main labels, screen_changed modified to include refresh clause
     if (screen_changed)
     {
         char prefix[4] = {(char)conv, ':', ' ', '\0'};
-        print(40 - (touch_init * 32), 96 - (touch_init * 53), prefix, header_color[idx], WHITE, 3 - (touch_init * 2), 3 - (touch_init * 2), 239);
+        print(U_CHANSEL_PRINT_X - (touch_init * U_CHANSEL_PRINT_X_T_F),
+              U_CHANSEL_PRINT_Y - (touch_init * U_CHANSEL_PRINT_Y_T_F),
+              prefix, header_color[idx], WHITE, FONT_3 - (touch_init * U_CHANSEL_FONT_X_T_F),
+              FONT_3 - (touch_init * U_CHANSEL_FONT_Y_T_F), SCREEN_EDGE_X);
+
         last_idx = j_idx;
     }
 
@@ -434,7 +433,9 @@ void UpdateChannelSelection(void)
     {
         char num_str[12];
         itoa(numberchannels, num_str, 10);
-        print(FindCenterX(6, 227, "0", 3) * touch_init + 148 - (148 * touch_init), FindCenterY(61 - (touch_init * 20), 113 - (touch_init * 20), "0", 3), num_str, RED, WHITE, 3, 3, 239);
+        print(FindCenterX(U_CHANSEL_NUMBER_PRINT_X, U_CHANSEL_NUMBER_PRINT_W, "0", FONT_3) * touch_init + U_CHANSEL_NUMBER_PRINT_X_T_F - (U_CHANSEL_NUMBER_PRINT_X_T_F * touch_init),
+              FindCenterY(U_CHANSEL_NUMBER_PRINT_Y - (touch_init * U_CHANSEL_NUMBER_PRINT_Y_T_F), U_CHANSEL_NUMBER_PRINT_H - (touch_init * U_CHANSEL_NUMBER_PRINT_Y_T_F), "0", FONT_3),
+              num_str, RED, WHITE, FONT_3, FONT_3, SCREEN_EDGE_X);
 
         if (idx >= 0 && idx < 7)
         {
@@ -462,9 +463,9 @@ void UpdateChannelSelection(void)
 
             itoa(val, chan_sel, 10);
 
-            print(FindCenterX(xcord[i], 100, "0", 1),
-                  FindCenterY(ycord[i] - (touch_init * 40), 42 - (touch_init * 6), "0", 1),
-                  chan_sel, WHITE, BLACK, 1, 1, 239);
+            print(FindCenterX(xcord[i], U_CHANSEL_SBOX_PRINT_W, "0", FONT_1),
+                  FindCenterY(ycord[i] - (touch_init * U_CHANSEL_SBOX_PRINT_Y_T_F), U_CHANSEL_SBOX_PRINT_H - (touch_init * U_CHANSEL_SBOX_PRINT_H_T_F), "0", FONT_1),
+                  chan_sel, WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
         }
     }
 
@@ -472,8 +473,8 @@ void UpdateChannelSelection(void)
     {
         char chan_sel[4];
         itoa(numberchannels, chan_sel, 10);
-        print(FindCenterX(xcord[idx], 100, "0", 1),
-              FindCenterY(ycord[idx] - (touch_init * 40), 42 - (touch_init * 6), "0", 1),
+        print(FindCenterX(xcord[idx], U_CHANSEL_SBOX_PRINT_W, "0", 1),
+              FindCenterY(ycord[idx] - (touch_init * U_CHANSEL_SBOX_PRINT_Y_T_F), U_CHANSEL_SBOX_PRINT_H - (touch_init * U_CHANSEL_SBOX_PRINT_H_T_F), "0", 1),
               chan_sel, WHITE, BLACK, 1, 1, 239);
     }
 }
@@ -521,33 +522,34 @@ void DisplayChannels(void)
     LCD_Clear(BLACK);
     InitYPositions();
 
-    Rectf(6, 0, 228, 25, WHITE); // Rectangle fill
+    Rectf(DISPCHAN_HEAD_X, DISPCHAN_HEAD_Y, DISPCHAN_HEAD_W, DISPCHAN_HEAD_H, WHITE); // Rectangle fill
     // implement command to rename custom display ?
-    print(FindCenterX(6, 228, display_title[title_index], 1) - (FindCenterX(6, 228, display_title[title_index], 1) * touch_init) + (12 * touch_init), FindCenterY(0, 25, display_title[title_index], 1), display_title[title_index], BLACK, WHITE, 1, 1, 231);
+    print(FindCenterX(DISPCHAN_HEAD_X, DISPCHAN_HEAD_W, display_title[title_index], FONT_1) - (FindCenterX(DISPCHAN_HEAD_X, DISPCHAN_HEAD_W, display_title[title_index], FONT_1) * touch_init) + (DISPCHAN_HEAD_T_F * touch_init),
+          FindCenterY(DISPCHAN_HEAD_Y, DISPCHAN_HEAD_H, display_title[title_index], FONT_1), display_title[title_index], BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X_HEAD);
 
     // determine number of rectangles needed based on numberdisplays
 
     for (i = 0; i < numberdisplays; i++)
     { // Execute draw rectangle based on how many displays there are
-        char conv = i + 65;
+        char conv = i + DISPCHAN_CONV_F;
         sprintf(header, "%c:", conv);
 
         // need to offset by 31 to keep minimum 6 spaces from start, and also must offset by pixel value so that boxes have enough space each new iteration
         // additional offset added to screens with 1-3 displays to center them (looks nicer)
-        int16_t Y_start = ((additional_offset[numberdisplays - 1]) * (i + 1) + (diff_display[0] + (diff_display[numberdisplays] + 6) * (i))); // offset of 6 (title and spacing of 6) +
+        int16_t Y_start = ((additional_offset[numberdisplays - 1]) * (i + 1) + (diff_display[0] + (diff_display[numberdisplays] + DISPCHAN_DIFF_OFF) * (i))); // offset of 6 (title and spacing of 6) +
 
-        Rect(6, Y_start, 228, diff_display[numberdisplays], WHITE);
+        Rect(DISPCHAN_HEAD_X, Y_start, DISPCHAN_HEAD_W, diff_display[numberdisplays], WHITE);
 
-        print(10, FindCenterY(Y_start, diff_display[numberdisplays], "A:", ((numberdisplays > 5) ? 1 : 2)), header, header_color[i], BLACK, ((numberdisplays > 5) ? 1 : 2), ((numberdisplays > 5) ? 1 : 2), 239);
+        print(DISPCHAN_PRINT_HEAD_X, FindCenterY(Y_start, diff_display[numberdisplays], "A:", ((numberdisplays > 5) ? FONT_1 : FONT_2)), header, header_color[i], BLACK, ((numberdisplays > 5) ? FONT_1 : FONT_2), ((numberdisplays > 5) ? FONT_1 : FONT_2), SCREEN_EDGE_X);
 
-        print(192, ((Y_start + diff_display[numberdisplays]) - 21), display_unit[unit_index], WHITE, BLACK, 1, 1, 239);
+        print(DISPCHAN_PRINT_READING_X, ((Y_start + diff_display[numberdisplays]) - DISPCHAN_PRINT_READING_Y_OFF), display_unit[unit_index], WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
 
     // "x" for return on display screen
     if (touch_init)
     {
-        print(214, 3, "x", BLACK, WHITE, 1, 1, 239);
-        Circle(219, 12, 11, BLACK);
+        print(DISPCHAN_EXIT_T_X, DISPCHAN_EXIT_T_Y, "x", BLACK, WHITE, FONT_1, FONT_1, SCREEN_EDGE_X);
+        Circle(DISPCHAN_EXIT_CIRCLE_T_X, DISPCHAN_EXIT_CIRCLE_T_Y, DISPCHAN_EXIT_CIRCLE_R, BLACK);
         // used to test centering
         // draw_pixel(219, 12, RED);
     }
@@ -570,7 +572,7 @@ void WaitForInput(void)
     static bool lock_engaged = false; // acts as lock to have 1 button press, tunes out noise/adc readings from falling voltages while the capacitor discharges after a button press
                                       // Only resets when finger fully removed and adc value falls below 600 threshold (Release Gate)
 
-    uint16_t adc_val = adc_read();  // take adc value
+    uint16_t adc_val = adc_read(); // take adc value
 
     // manually reset buttons on each new waitforinput because theoretically each new waitforinput should be waiting for an input or processing a single one
     int8_t b1_pressed = 0, b2_pressed = 0, enter_pressed = 0, return_pressed = 0;
