@@ -38,6 +38,12 @@
 /* OFF = OFFSET */
 /* SBOX = SMALL BOX */
 /* DISPCHAN = DISPLAY CHANNELS*/
+/* WFI = WAITFORINPUT */
+/* THRESH = THRESHOLD */
+/* NP = NOT PRESSED */
+/* P = PRESSED */
+/* HI = HIGH */
+/* L = LOW */
 /* -------- END KEY -------- */
 
 // General
@@ -267,6 +273,28 @@
 // InitYPositions
 #define Y_POS_POSSIBILITES 7
 #define Y_POS_OFF 6
+
+// WaitForInput
+#define WFI_BUT_THRESH_NP 500
+#define WFI_BUT_THRESH_P 700
+#define WFI_BUT_ENTER_THRESH_P 3725
+#define WFI_BUT_RETURN_THRESH_P_HI 2980
+#define WFI_BUT_RETURN_THRESH_P_L 2480
+#define WFI_BUT_DOWN_THRESH_P_HI 2235
+#define WFI_BUT_DOWN_THRESH_P_L 1740
+#define WFI_BUT_UP_THRESH_P_HI 1490
+#define WFI_BUT_UP_THRESH_P_L 990
+
+#define MAX_NUMBER_DISPLAYS 7
+#define MIN_NUMBER_DISPLAYS 1
+
+#define WFI_IDX_THRESH 6
+#define WFI_CHANSEL_ERASER_X_W 100
+#define WFI_CHANSEL_ERASER_Y_F 40
+#define WFI_CHANSEL_ERASER_START_H 42
+#define WFI_CHANSEL_ERASER_Y_H_F 6
+#define WFI_CHANSEL_ERASER_W 14
+#define WFI_CHANSEL_ERASER_H 20
 
 extern int diff_display[8];
 extern int16_t saved_Ypos[7];

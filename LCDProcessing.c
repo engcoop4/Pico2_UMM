@@ -8,6 +8,7 @@
  */
 
 #include "LCDProcessing.h"
+#include "TouchScreeninit.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -17,9 +18,8 @@
 #include "AdafruitDisplayInits.h"
 #include "Global.h"
 
-// touch_init = 0 while initial testing done
-// REMOVE THIS WHEN TOUCH SCREEN TESTING IS DESIRED
-// IN ADDITION, RESET_LCD_MAPPING COMMENTED OUT OF FUNCTIONS PRESETCONFIGS AND UPDATENUMBEROFDISPLAYS. RESTORE THESE BEFORE OFFICIAL TESTING IS EXECUTED
+// touch_init = 1 for touch screen enabled
+// Set to 0 to disable touch screen testing until user enables it
 int touch_init = 0;
 
 uint8_t LCD_ch_source[7] = {1, 2, 3, 4, 5, 6, 7};
@@ -572,50 +572,55 @@ void WaitForInput(void)
     static bool lock_engaged = false; // acts as lock to have 1 button press, tunes out noise/adc readings from falling voltages while the capacitor discharges after a button press
                                       // Only resets when finger fully removed and adc value falls below 600 threshold (Release Gate)
 
-    uint16_t adc_val = adc_read(); // take adc value
-
     // manually reset buttons on each new waitforinput because theoretically each new waitforinput should be waiting for an input or processing a single one
     int8_t b1_pressed = 0, b2_pressed = 0, enter_pressed = 0, return_pressed = 0;
 
-    // no buttons pressed if falls under 500, "unlocks"
-    if (adc_val < 500)
+    // CRITICAL: Only read button ADC if touch is DISABLED to avoid concurrent ADC access
+    // When touch is enabled, it has priority over button inputs
+    if (!touch_init)
     {
-        lock_engaged = false;
-    }
+        uint16_t adc_val = adc_read(); // take adc value
 
-    // if lock is not engaged and adc value is above 700, we can say "a button is being pressed"
-    if (!lock_engaged && adc_val >= 700)
-    {
-
-        // wait for SPI noise to pass (even with filters included, SPI communication causes noise spikes)
-        sleep_ms(5);
-
-        // take a confirmation reading to ensure its not just a random spike
-        adc_val = adc_read();
-
-        // button value reads at 4071, use 3725 for expected tolerance across parts, if above this threshold, ENTER is being pressed
-        if (adc_val >= 3725)
+        // no buttons pressed if falls under 500, "unlocks"
+        if (adc_val < WFI_BUT_THRESH_NP)
         {
-            enter_pressed = 1;
-            lock_engaged = true;
+            lock_engaged = false;
         }
-        // button value reads at 2780, use 2480 (low) and 2980 (high) for expected tolerance across parts, if between this threshold, RETURN is being pressed
-        else if (adc_val >= 2480 && adc_val <= 2980)
+
+        // if lock is not engaged and adc value is above 700, we can say "a button is being pressed"
+        if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
         {
-            return_pressed = 1;
-            lock_engaged = true;
-        }
-        // button value reads at 2048, use 1737 (low) and 2234 (high) for expected tolerance across parts, if between this threshold, DOWN is being pressed
-        else if (adc_val >= 1740 && adc_val <= 2235)
-        {
-            b2_pressed = 1;
-            lock_engaged = true;
-        }
-        // button value reads at 1365, use 992 (low) and 1489 (high) for expected tolerance across parts, if between this threshold, UP is being pressed
-        else if (adc_val >= 990 && adc_val <= 1490)
-        {
-            b1_pressed = 1;
-            lock_engaged = true;
+
+            // wait for SPI noise to pass (even with filters included, SPI communication causes noise spikes)
+            sleep_ms(5);
+
+            // take a confirmation reading to ensure its not just a random spike
+            adc_val = adc_read();
+
+            // button value reads at 4071, use 3725 for expected tolerance across parts, if above this threshold, ENTER is being pressed
+            if (adc_val >= WFI_BUT_ENTER_THRESH_P)
+            {
+                enter_pressed = 1;
+                lock_engaged = true;
+            }
+            // button value reads at 2780, use 2480 (low) and 2980 (high) for expected tolerance across parts, if between this threshold, RETURN is being pressed
+            else if (adc_val >= WFI_BUT_RETURN_THRESH_P_L && adc_val <= WFI_BUT_RETURN_THRESH_P_HI)
+            {
+                return_pressed = 1;
+                lock_engaged = true;
+            }
+            // button value reads at 2048, use 1737 (low) and 2234 (high) for expected tolerance across parts, if between this threshold, DOWN is being pressed
+            else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
+            {
+                b2_pressed = 1;
+                lock_engaged = true;
+            }
+            // button value reads at 1365, use 992 (low) and 1489 (high) for expected tolerance across parts, if between this threshold, UP is being pressed
+            else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
+            {
+                b1_pressed = 1;
+                lock_engaged = true;
+            }
         }
     }
 
@@ -645,23 +650,23 @@ void WaitForInput(void)
 
         if (enter_pressed)
         {
-            if (cursor_position == 0)
+            if (!cursor_position)
             {
                 cali = 0;
-                // touch_triggered = 0;
+                touch_triggered = 0;
 
                 // in case of Disable -> Return -> Enable
                 // P1IE &= ~BIT0;        // Disable interrupt
                 // P1IFG &= ~BIT0;       // Clear any "stale" flag from the 'Disabled' period
 
                 current_screen = Screen_TouchCalibration;
-                // TouchScreeninit();    // Re-init pins and re-enable P1IE
+                TouchScreeninit();    // Re-init pins and re-enable P1IE
             }
             else
             {
                 current_screen = Screen_OperatingMode;
                 // should be disabling touch screen initialization
-                // TouchScreen_deinit();
+                TouchScreen_deinit();
             }
             cursor_position = 0;
             force_redraw = true;
@@ -670,21 +675,21 @@ void WaitForInput(void)
 
     // needs to respond to touch ONLY, no button presses for calibration
     // code at bottom will scan for X and Y coordinate values
-    // kills interrupt
+    // kills interrupt - how does this work with how the R-Pi handles interrupts ?
     case Screen_TouchCalibration:
-        /*
+        
             if(touch_triggered) {
                 // 1. GATEKEEPER: Is the user touching the right general area?
-                if(CaliBoundsCheckTS()) {
+                if(CaliBoundsCheckTouch()) {
 
                     if(cali == 0) {
-                        CaptureCaliCoordsTS();
+                        CaptureCaliCoordsTouch();
 
                         // update cali value AFTER min values captured, update screen to indicate to user to remove finger
                         UpdateTouchCalibration();
 
                         // 4. WAIT: Don't move on until the finger is gone
-                        WaitForReleaseTS();
+                        WaitForTouchRelease();
                         touch_triggered = 0;
 
                         // 5. RE-ARM: Clean up flags and re-enable interrupt
@@ -693,9 +698,9 @@ void WaitForInput(void)
                     }
                     else if (cali == 1) {
                         // Repeat for the second point
-                        CaptureCaliCoordsTS();
+                        CaptureCaliCoordsTouch();
 
-                        WaitForReleaseTS();
+                        WaitForTouchRelease();
                         FinishTouchCalibration();
                         current_screen = Screen_OperatingMode;
 
@@ -709,19 +714,19 @@ void WaitForInput(void)
                 else {
                     // FAILED BOUNDS: User touched the wrong spot.
                     // We must still reset the flag/interrupt so they can try again.
-                    WaitForReleaseTS();
+                    WaitForTouchRelease();
                     //P1IFG &= ~BIT0;
                     touch_triggered = 0;
                     //P1IE |= BIT0;
                 }
             }
-            */
+        
         break;
     // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
     // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
     case Screen_OperatingMode:
     {
-        /*
+        
         // 1. TOUCH INPUT LOGIC
         if (touch_triggered) {
             // Clear the ISR flag immediately so we don't loop on the same touch
@@ -749,11 +754,10 @@ void WaitForInput(void)
                 }
             }
 
-            // Re-enable Port 1 Interrupt for the next physical touch
-            //P1IFG &= ~BIT0;
-            //P1IE  |=  BIT0;
+            // Re-enable interrupt for next touch event
+            gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
         }
-        */
+        
 
         // 2. PHYSICAL BUTTON LOGIC
         // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
@@ -823,7 +827,7 @@ void WaitForInput(void)
 
         if (value_changed)
         {
-            numberdisplays = (numberdisplays > 7) ? 1 : (numberdisplays < 1 ? 7 : numberdisplays);
+            numberdisplays = (numberdisplays > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberdisplays < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberdisplays);
             UpdateNumberOfDisplays();
         }
 
@@ -859,7 +863,7 @@ void WaitForInput(void)
 
         if (value_changed)
         {
-            numberchannels = (numberchannels > 7) ? 1 : (numberchannels < 1 ? 7 : numberchannels);
+            numberchannels = (numberchannels > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberchannels < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberchannels);
             UpdateChannelSelection();
         }
 
@@ -886,11 +890,11 @@ void WaitForInput(void)
                 numberchannels = 1;
 
                 // wrap in conditional statement to prevent random black box being drawn for j_idx = 6 (out of array bounds)
-                if (idx < 6)
+                if (idx < WFI_IDX_THRESH)
                 {
-                    Rectf(FindCenterX(xcord[idx], 100, "0", 1),
-                          FindCenterY(ycord[idx] - (touch_init * 40), 42 - (touch_init * 6), "0", 1),
-                          14, 20, BLACK);
+                    Rectf(FindCenterX(xcord[idx], WFI_CHANSEL_ERASER_X_W, "0", FONT_1),
+                          FindCenterY(ycord[idx] - (touch_init * WFI_CHANSEL_ERASER_Y_F), WFI_CHANSEL_ERASER_START_H - (touch_init * WFI_CHANSEL_ERASER_Y_H_F), "0", FONT_1),
+                          WFI_CHANSEL_ERASER_W, WFI_CHANSEL_ERASER_H, BLACK);
                 }
 
                 UpdateChannelSelection();
@@ -907,7 +911,7 @@ void WaitForInput(void)
 
     // update the 'previous state' trackers for the next loop pass
 
-    /*
+    
     // LEDs and cursor used for tracking touch, not included in final implementation
     if(current_screen != Screen_TouchCalibration) {
         if (touch_init) {
@@ -978,5 +982,5 @@ void WaitForInput(void)
             }
         }
     }
-    */
+    
 }
