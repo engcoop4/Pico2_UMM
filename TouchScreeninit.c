@@ -27,31 +27,31 @@ uint16_t touch_baseline = 0;
 // USED FOR INITIAL CALIBRATION TO ENSURE USER IS PRESSING IN RELATIVE AREA.
 // changed from defines to variables so they can be changed dependent on calibration settings
 // most likely needs to be changed since ADC is switching from 10-bit (CCS) to 12-bit (Pico)
-uint16_t TS_X_MIN = 150;
-uint16_t TS_X_MAX = 850;
-uint16_t TS_Y_MIN = 150;
-uint16_t TS_Y_MAX = 850;
+uint16_t TS_X_MIN = 600;
+uint16_t TS_X_MAX = 3400;
+uint16_t TS_Y_MIN = 600;
+uint16_t TS_Y_MAX = 3400;
 
 void TouchScreeninit(void)
 {
     touch_init = 1;
 
     adc_init();
-    adc_run(true);  // Enable ADC
+    adc_run(true); // Enable ADC
 
     // initialize GPIOs for touch screen
     gpio_init(X_PLUS);
     gpio_init(X_MINUS);
-    adc_gpio_init(Y_PLUS);  // Y+ needs to be ADC input for touch detection
+    adc_gpio_init(Y_PLUS); // Y+ needs to be ADC input for touch detection
     gpio_init(Y_MINUS);
 
     // Set pins appropriately for touch detection
-    gpio_set_dir(X_PLUS, GPIO_OUT);  // X+ as output (will be driven low)
+    gpio_set_dir(X_PLUS, GPIO_OUT); // X+ as output (will be driven low)
     gpio_put(X_PLUS, 0);
     gpio_set_dir(X_MINUS, GPIO_OUT); // X- as output (will be driven low)
     gpio_put(X_MINUS, 0);
     // Y+ is already ADC input from adc_gpio_init
-    gpio_set_dir(Y_MINUS, GPIO_IN);  // Y- as input for interrupt
+    gpio_set_dir(Y_MINUS, GPIO_IN); // Y- as input for interrupt
 
     // Enable pull-up on Y- for touch detection
     gpio_pull_up(Y_MINUS);
@@ -86,7 +86,7 @@ void TouchScreen_deinit(void)
     // Set all touch pins to high-impedance inputs
     gpio_set_dir(X_PLUS, GPIO_IN);
     gpio_set_dir(X_MINUS, GPIO_IN);
-    gpio_set_function(Y_PLUS, GPIO_FUNC_SIO);  // Convert Y+ back to GPIO
+    gpio_set_function(Y_PLUS, GPIO_FUNC_SIO); // Convert Y+ back to GPIO
     gpio_set_dir(Y_PLUS, GPIO_IN);
     gpio_set_dir(Y_MINUS, GPIO_IN);
 
@@ -283,7 +283,7 @@ void WaitForTouchRelease(void)
 
     // 4. Clear interrupt flags (RP2350 SDK handles this, but we ensure state is ready)
     // The next time the interrupt is enabled, it won't see "stale" noise.
-    
+
     // Re-enable interrupt for next touch event
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
 }
@@ -340,22 +340,25 @@ uint16_t ReadTouchX_Raw(void)
 {
     uint16_t result;
 
-    // Reset ADC state before raw touch measurement
     adc_init();
-
-    // Set up for X-axis measurement:
-    // Drive X+ high, X- low
+    // 1. Power X Axis
     gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_put(X_PLUS, 1);
     gpio_set_dir(X_MINUS, GPIO_OUT);
     gpio_put(X_MINUS, 0);
 
-    // Set Y+ as ADC input, Y- as high-impedance input
-    adc_gpio_init(Y_PLUS);
-    adc_select_input(0); // ADC0 (GPIO 26)
-    gpio_set_dir(Y_MINUS, GPIO_IN);
+    // 2. Prepare Sense Pin (Y+)
+    gpio_init(Y_PLUS);          // Reset pin state
+    adc_gpio_init(Y_PLUS);      // Hand over to ADC
+    gpio_disable_pulls(Y_PLUS); // disable internal pull-up
+    adc_select_input(0);
 
-    sleep_us(250);
+    // 3. Float the unused pin
+    gpio_init(Y_MINUS);
+    gpio_set_dir(Y_MINUS, GPIO_IN);
+    gpio_disable_pulls(Y_MINUS);
+
+    sleep_us(500);
 
     result = adc_read();
 
@@ -421,10 +424,11 @@ uint16_t ReadTouchY_Raw(void)
 
     // Set X+ as ADC input, X- as high-impedance input
     adc_gpio_init(X_PLUS);
+    gpio_disable_pulls(X_PLUS); // disable internal pull-up
     adc_select_input(1); // ADC1 (GPIO 27)
     gpio_set_dir(X_MINUS, GPIO_IN);
 
-    sleep_us(250);
+    sleep_us(500);
 
     result = adc_read();
 
