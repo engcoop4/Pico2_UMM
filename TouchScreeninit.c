@@ -33,7 +33,6 @@ uint16_t TS_Y_MIN = 600;
 uint16_t TS_Y_MAX = 3400;
 
 void TouchScreeninit(void)
-
 {
 
     touch_init = 1;
@@ -64,8 +63,10 @@ void TouchScreeninit(void)
     gpio_disable_pulls(X_MINUS);
     gpio_disable_pulls(Y_PLUS);
 
-    sleep_ms(10);
+    busy_wait_ms(10);
 
+    CalibrateTouch();
+    
     // enable interrupts on Y- pin for touch detection
     gpio_set_irq_enabled_with_callback(Y_MINUS, GPIO_IRQ_EDGE_FALL, true, &TouchInterrupt);
 }
@@ -155,7 +156,7 @@ uint16_t CalculateTouch(void)
     adc_select_input(0);
 
     // Allow voltages to settle
-    sleep_us(250);
+    busy_wait_us(250);
 
     // Read the ADC value
     uint16_t result = adc_read();
@@ -195,7 +196,7 @@ void CaptureCaliCoordsTouch(void)
     {
         x_acc += ReadTouchX_Raw();
         y_acc += ReadTouchY_Raw();
-        sleep_us(150);
+        busy_wait_us(150);
     }
     if (!cali)
     {
@@ -217,7 +218,7 @@ uint16_t CalculateTouch_Stable(void)
 
     for (int i = 0; i < STABILIZATION_TIMEOUT; i++)
     {
-        sleep_us(150);
+        busy_wait_us(150);
         last_val = current_val;
         current_val = CalculateTouch();
 
@@ -259,7 +260,7 @@ void WaitForTouchRelease(void)
         for (int i = 0; i < AVERAGE_SAMPLES_RELEASE; i++)
         {
             avg_val += adc_read();
-            sleep_us(10); // replaces __delay_cycles(100)
+            busy_wait_us(10); // replaces __delay_cycles(100)
         }
         avg_val = avg_val / AVERAGE_SAMPLES_RELEASE;
 
@@ -273,7 +274,7 @@ void WaitForTouchRelease(void)
             count = 0;
         }
 
-        sleep_us(100); // replaces __delay_cycles(1000)
+        busy_wait_us(100); // replaces __delay_cycles(1000)
     }
 
     // 2. Re-establish physical Trap (Digital state)
@@ -281,10 +282,13 @@ void WaitForTouchRelease(void)
     gpio_set_dir(Y_PLUS, GPIO_IN); // High-Z, waiting for pull-up
 
     // 3. Settling window
-    sleep_us(500);
+    busy_wait_us(500);
 
     // 4. Clear interrupt flags (RP2350 SDK handles this, but we ensure state is ready)
     // The next time the interrupt is enabled, it won't see "stale" noise.
+
+    // clear hardware pending interrupt bit
+    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
 
     // Re-enable interrupt for next touch event
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
@@ -318,7 +322,7 @@ uint16_t ReadTouchX(void)
             max_raw = current;
 
         raw_sum += current;
-        sleep_us(150);
+        busy_wait_us(150);
     }
     uint32_t avg_raw = (raw_sum - min_raw - max_raw) / (AVERAGE_READ_SAMPLES - 2); // Remove outliers and keep fast division by 16
 
@@ -344,8 +348,8 @@ uint16_t ReadTouchX_Raw(void)
 
     // 1. RE-ARM the ADC Mux (The "Soft Kick")
     // This tells the ADC exactly which pin to look at and clears any stalls
-    adc_select_input(0); 
-    
+    adc_select_input(0);
+
     // 2. Power the X-axis for measurement
     gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_put(X_PLUS, 1);
@@ -354,9 +358,9 @@ uint16_t ReadTouchX_Raw(void)
 
     // 3. Ensure the Sense pin (Y+) is handed to the ADC
     adc_gpio_init(Y_PLUS);
-    
+
     // 4. Settle time - Use busy_wait to avoid the time.c hang
-    busy_wait_us(500); 
+    busy_wait_us(1000);
 
     // 5. Trigger a SINGLE conversion
     // This is the "Nuclear" alternative to a full adc_init
@@ -390,7 +394,7 @@ uint16_t ReadTouchY(void)
             max_raw = current;
 
         raw_sum += current;
-        sleep_us(150);
+        busy_wait_us(150);
     }
     uint32_t avg_raw = (raw_sum - min_raw - max_raw) / (AVERAGE_READ_SAMPLES - 2); // Remove outliers and keep fast division by 16
 
@@ -416,7 +420,7 @@ uint16_t ReadTouchY_Raw(void)
 
     // 1. "Soft Kick" the ADC
     // Select ADC1 (GPIO 27) and ensure conversion isn't stalled
-    adc_select_input(1); 
+    adc_select_input(1);
 
     // 2. Power the Y-axis (Vertical Gradient)
     // Drive Y+ High (3.3V) and Y- Low (GND)
@@ -436,7 +440,7 @@ uint16_t ReadTouchY_Raw(void)
     gpio_disable_pulls(X_MINUS);
 
     // 5. Settle time - Use busy_wait to prevent time.c deadlock
-    busy_wait_us(500); 
+    busy_wait_us(1000);
 
     // 6. Trigger a SINGLE conversion
     result = adc_read();
@@ -455,7 +459,7 @@ uint16_t ReadTouchY_Raw(void)
     gpio_init(Y_MINUS);
     gpio_set_dir(Y_MINUS, GPIO_IN);
     gpio_pull_up(Y_MINUS);
-    
+
     // Ensure Y+ is ready to be an ADC sensing probe or High-Z
     gpio_init(Y_PLUS);
     gpio_set_dir(Y_PLUS, GPIO_IN);
