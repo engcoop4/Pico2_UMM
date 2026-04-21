@@ -33,7 +33,9 @@ uint16_t TS_Y_MIN = 600;
 uint16_t TS_Y_MAX = 3400;
 
 void TouchScreeninit(void)
+
 {
+
     touch_init = 1;
 
     adc_init();
@@ -50,6 +52,7 @@ void TouchScreeninit(void)
     gpio_put(X_PLUS, 0);
     gpio_set_dir(X_MINUS, GPIO_OUT); // X- as output (will be driven low)
     gpio_put(X_MINUS, 0);
+
     // Y+ is already ADC input from adc_gpio_init
     gpio_set_dir(Y_MINUS, GPIO_IN); // Y- as input for interrupt
 
@@ -61,7 +64,6 @@ void TouchScreeninit(void)
     gpio_disable_pulls(X_MINUS);
     gpio_disable_pulls(Y_PLUS);
 
-    // Give ADC time to settle before taking readings
     sleep_ms(10);
 
     // enable interrupts on Y- pin for touch detection
@@ -340,8 +342,8 @@ uint16_t ReadTouchX_Raw(void)
 {
     uint16_t result;
 
-    adc_init();
-    // 1. Power X Axis
+    // adc_init();
+    //  1. Power X Axis
     gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_put(X_PLUS, 1);
     gpio_set_dir(X_MINUS, GPIO_OUT);
@@ -358,7 +360,7 @@ uint16_t ReadTouchX_Raw(void)
     gpio_set_dir(Y_MINUS, GPIO_IN);
     gpio_disable_pulls(Y_MINUS);
 
-    sleep_us(500);
+    busy_wait_us(250);
 
     result = adc_read();
 
@@ -413,7 +415,7 @@ uint16_t ReadTouchY_Raw(void)
     uint16_t result;
 
     // Reset ADC state before raw touch measurement
-    adc_init();
+    // adc_init();
 
     // Set up for Y-axis measurement:
     // Drive Y+ high, Y- low
@@ -425,10 +427,10 @@ uint16_t ReadTouchY_Raw(void)
     // Set X+ as ADC input, X- as high-impedance input
     adc_gpio_init(X_PLUS);
     gpio_disable_pulls(X_PLUS); // disable internal pull-up
-    adc_select_input(1); // ADC1 (GPIO 27)
+    adc_select_input(1);        // ADC1 (GPIO 27)
     gpio_set_dir(X_MINUS, GPIO_IN);
 
-    sleep_us(500);
+    busy_wait_us(250);
 
     result = adc_read();
 
