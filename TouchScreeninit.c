@@ -39,7 +39,7 @@ void TouchScreeninit(void)
     touch_init = 1;
 
     adc_init();
-    adc_run(true); // Enable ADC
+    adc_run(false); // Enable ADC
 
     // initialize GPIOs for touch screen
     gpio_init(X_PLUS);
@@ -342,34 +342,34 @@ uint16_t ReadTouchX_Raw(void)
 {
     uint16_t result;
 
-    // adc_init();
-    //  1. Power X Axis
+    // 1. RE-ARM the ADC Mux (The "Soft Kick")
+    // This tells the ADC exactly which pin to look at and clears any stalls
+    adc_select_input(0); 
+    
+    // 2. Power the X-axis for measurement
     gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_put(X_PLUS, 1);
     gpio_set_dir(X_MINUS, GPIO_OUT);
     gpio_put(X_MINUS, 0);
 
-    // 2. Prepare Sense Pin (Y+)
-    gpio_init(Y_PLUS);          // Reset pin state
-    adc_gpio_init(Y_PLUS);      // Hand over to ADC
-    gpio_disable_pulls(Y_PLUS); // disable internal pull-up
-    adc_select_input(0);
+    // 3. Ensure the Sense pin (Y+) is handed to the ADC
+    adc_gpio_init(Y_PLUS);
+    
+    // 4. Settle time - Use busy_wait to avoid the time.c hang
+    busy_wait_us(500); 
 
-    // 3. Float the unused pin
-    gpio_init(Y_MINUS);
-    gpio_set_dir(Y_MINUS, GPIO_IN);
-    gpio_disable_pulls(Y_MINUS);
-
-    busy_wait_us(250);
-
+    // 5. Trigger a SINGLE conversion
+    // This is the "Nuclear" alternative to a full adc_init
     result = adc_read();
 
-    // Restore all pins to high-impedance inputs
-    gpio_set_dir(X_PLUS, GPIO_IN);
-    gpio_set_dir(X_MINUS, GPIO_IN);
-    gpio_set_function(Y_PLUS, GPIO_FUNC_SIO);
-    gpio_set_dir(Y_PLUS, GPIO_IN);
-    gpio_set_dir(Y_MINUS, GPIO_IN);
+    // 6. RESTORE THE TRAP (Return to detection mode)
+    gpio_init(X_PLUS);
+    gpio_set_dir(X_PLUS, GPIO_OUT);
+    gpio_put(X_PLUS, 0);
+
+    gpio_init(X_MINUS);
+    gpio_set_dir(X_MINUS, GPIO_OUT);
+    gpio_put(X_MINUS, 0);
 
     return result;
 }
@@ -414,32 +414,52 @@ uint16_t ReadTouchY_Raw(void)
 {
     uint16_t result;
 
-    // Reset ADC state before raw touch measurement
-    // adc_init();
+    // 1. "Soft Kick" the ADC
+    // Select ADC1 (GPIO 27) and ensure conversion isn't stalled
+    adc_select_input(1); 
 
-    // Set up for Y-axis measurement:
-    // Drive Y+ high, Y- low
+    // 2. Power the Y-axis (Vertical Gradient)
+    // Drive Y+ High (3.3V) and Y- Low (GND)
     gpio_set_dir(Y_PLUS, GPIO_OUT);
     gpio_put(Y_PLUS, 1);
     gpio_set_dir(Y_MINUS, GPIO_OUT);
     gpio_put(Y_MINUS, 0);
 
-    // Set X+ as ADC input, X- as high-impedance input
+    // 3. Prepare the Sense Pin (X+)
+    // Hand X+ over to ADC and ensure no pulls are fighting the screen
     adc_gpio_init(X_PLUS);
-    gpio_disable_pulls(X_PLUS); // disable internal pull-up
-    adc_select_input(1);        // ADC1 (GPIO 27)
+    gpio_disable_pulls(X_PLUS);
+
+    // 4. Float the unused pin
+    gpio_init(X_MINUS);
     gpio_set_dir(X_MINUS, GPIO_IN);
+    gpio_disable_pulls(X_MINUS);
 
-    busy_wait_us(250);
+    // 5. Settle time - Use busy_wait to prevent time.c deadlock
+    busy_wait_us(500); 
 
+    // 6. Trigger a SINGLE conversion
     result = adc_read();
 
-    // Restore all pins to high-impedance inputs
-    gpio_set_dir(Y_PLUS, GPIO_IN);
+    // 7. RESTORE THE TRAP (Return to detection state)
+    // We drive X pins low and set Y-up for interrupt as per your working init
+    gpio_init(X_PLUS);
+    gpio_set_dir(X_PLUS, GPIO_OUT);
+    gpio_put(X_PLUS, 0);
+
+    gpio_init(X_MINUS);
+    gpio_set_dir(X_MINUS, GPIO_OUT);
+    gpio_put(X_MINUS, 0);
+
+    // Ensure Y- is back to its Interrupt state
+    gpio_init(Y_MINUS);
     gpio_set_dir(Y_MINUS, GPIO_IN);
-    gpio_set_function(X_PLUS, GPIO_FUNC_SIO);
-    gpio_set_dir(X_PLUS, GPIO_IN);
-    gpio_set_dir(X_MINUS, GPIO_IN);
+    gpio_pull_up(Y_MINUS);
+    
+    // Ensure Y+ is ready to be an ADC sensing probe or High-Z
+    gpio_init(Y_PLUS);
+    gpio_set_dir(Y_PLUS, GPIO_IN);
+    gpio_disable_pulls(Y_PLUS);
 
     return result;
 }
