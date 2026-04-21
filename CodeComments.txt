@@ -1,0 +1,2 @@
+20260421RW: Creation of new CodeComments file, separate from the one on CCS (for the msp430f6779). Will just include comments regarding LCD development and connecting to the msp430f6779,
+will not contain any comments from the CCS file.
