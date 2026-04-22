@@ -909,9 +909,6 @@ void WaitForInput(void)
     }
     }
 
-    // update the 'previous state' trackers for the next loop pass
-
-    
     // LEDs and cursor used for tracking touch, not included in final implementation
     if(current_screen != Screen_TouchCalibration) {
         if (touch_init) {
@@ -919,7 +916,7 @@ void WaitForInput(void)
                 // waits for voltage to stabilize before taking reading
                 // used because some boards have high resistance/noisier environment and sometimes miss touches (board #6)
                 uint16_t current_val = CalculateTouch_Stable();
-                uint16_t sensitivity = 500;
+                uint16_t sensitivity = 2000;        // (500 * 4096) / 1024 = 2000
 
                 static uint16_t last_X = 0;
                 static uint16_t last_Y = 0;
@@ -928,7 +925,7 @@ void WaitForInput(void)
                 static uint8_t filter_block_count = 0;
 
                 if (current_val < (touch_baseline - sensitivity)) {
-                    //P5OUT &= ~BIT4;   // LED ON
+                    gpio_put(LED3, 0);
 
                     uint16_t new_Y = ReadTouchY();
                     uint16_t new_X = ReadTouchX();
