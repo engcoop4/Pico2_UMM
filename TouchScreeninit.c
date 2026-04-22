@@ -356,6 +356,7 @@ uint16_t ReadTouchX_Raw(void)
     gpio_set_dir(X_MINUS, GPIO_OUT);
     gpio_put(X_MINUS, 0);
 
+    gpio_set_dir(Y_MINUS, GPIO_IN);
     // 3. Ensure the Sense pin (Y+) is handed to the ADC
     adc_gpio_init(Y_PLUS);
 
@@ -366,14 +367,12 @@ uint16_t ReadTouchX_Raw(void)
     // This is the "Nuclear" alternative to a full adc_init
     result = adc_read();
 
-    // 6. RESTORE THE TRAP (Return to detection mode)
-    gpio_init(X_PLUS);
-    gpio_set_dir(X_PLUS, GPIO_OUT);
-    gpio_put(X_PLUS, 0);
+    gpio_set_dir(X_PLUS, GPIO_IN);
+    gpio_set_dir(X_MINUS, GPIO_IN);
+    gpio_set_function(Y_PLUS, GPIO_FUNC_SIO);
 
-    gpio_init(X_MINUS);
-    gpio_set_dir(X_MINUS, GPIO_OUT);
-    gpio_put(X_MINUS, 0);
+    gpio_set_dir(Y_PLUS, GPIO_IN);
+    gpio_set_dir(Y_MINUS, GPIO_IN);
 
     return result;
 }
@@ -429,15 +428,12 @@ uint16_t ReadTouchY_Raw(void)
     gpio_set_dir(Y_MINUS, GPIO_OUT);
     gpio_put(Y_MINUS, 0);
 
+    gpio_set_dir(X_MINUS, GPIO_IN);
+
     // 3. Prepare the Sense Pin (X+)
     // Hand X+ over to ADC and ensure no pulls are fighting the screen
     adc_gpio_init(X_PLUS);
     gpio_disable_pulls(X_PLUS);
-
-    // 4. Float the unused pin
-    gpio_init(X_MINUS);
-    gpio_set_dir(X_MINUS, GPIO_IN);
-    gpio_disable_pulls(X_MINUS);
 
     // 5. Settle time - Use busy_wait to prevent time.c deadlock
     busy_wait_us(1000);
@@ -447,23 +443,12 @@ uint16_t ReadTouchY_Raw(void)
 
     // 7. RESTORE THE TRAP (Return to detection state)
     // We drive X pins low and set Y-up for interrupt as per your working init
-    gpio_init(X_PLUS);
-    gpio_set_dir(X_PLUS, GPIO_OUT);
-    gpio_put(X_PLUS, 0);
 
-    gpio_init(X_MINUS);
-    gpio_set_dir(X_MINUS, GPIO_OUT);
-    gpio_put(X_MINUS, 0);
-
-    // Ensure Y- is back to its Interrupt state
-    gpio_init(Y_MINUS);
-    gpio_set_dir(Y_MINUS, GPIO_IN);
-    gpio_pull_up(Y_MINUS);
-
-    // Ensure Y+ is ready to be an ADC sensing probe or High-Z
-    gpio_init(Y_PLUS);
     gpio_set_dir(Y_PLUS, GPIO_IN);
-    gpio_disable_pulls(Y_PLUS);
+    gpio_set_dir(Y_MINUS, GPIO_IN);
+    gpio_set_function(X_PLUS, GPIO_FUNC_SIO);
+    gpio_set_dir(X_PLUS, GPIO_OUT);
+    gpio_set_dir(X_MINUS, GPIO_OUT);
 
     return result;
 }
