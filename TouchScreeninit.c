@@ -66,7 +66,7 @@ void TouchScreeninit(void)
     busy_wait_ms(10);
 
     CalibrateTouch();
-    
+
     // enable interrupts on Y- pin for touch detection
     gpio_set_irq_enabled_with_callback(Y_MINUS, GPIO_IRQ_EDGE_FALL, true, &TouchInterrupt);
 }
@@ -128,6 +128,32 @@ void TouchInterrupt(uint gpio, uint32_t events)
     }
 }
 
+// used to re-initialize GPIOs to handle interrupt
+void TouchInterrupt_Helper(void)
+{
+    gpio_init(X_PLUS);
+    gpio_init(X_MINUS);
+    adc_gpio_init(Y_PLUS); // Y+ needs to be ADC input for touch detection
+    gpio_init(Y_MINUS);
+
+    // Set pins appropriately for touch detection
+    gpio_set_dir(X_PLUS, GPIO_OUT); // X+ as output (will be driven low)
+    gpio_put(X_PLUS, 0);
+    gpio_set_dir(X_MINUS, GPIO_OUT); // X- as output (will be driven low)
+    gpio_put(X_MINUS, 0);
+
+    // Y+ is already ADC input from adc_gpio_init
+    gpio_set_dir(Y_MINUS, GPIO_IN); // Y- as input for interrupt
+
+    // Enable pull-up on Y- for touch detection
+    gpio_pull_up(Y_MINUS);
+
+    // Disable pulls on other pins
+    gpio_disable_pulls(X_PLUS);
+    gpio_disable_pulls(X_MINUS);
+    gpio_disable_pulls(Y_PLUS);
+}
+
 void CalibrateTouch(void)
 {
     uint32_t accumulator = 0;
@@ -169,6 +195,9 @@ bool CaliBoundsCheckTouch(void)
 {
     uint16_t rx = ReadTouchX_Raw();
     uint16_t ry = ReadTouchY_Raw();
+
+    // re-initialize the interrupt state after every reading
+    TouchInterrupt_Helper();
 
     if (!cali)
     {
@@ -282,7 +311,7 @@ void WaitForTouchRelease(void)
     gpio_set_dir(Y_PLUS, GPIO_IN); // High-Z, waiting for pull-up
 
     // 3. Settling window
-    busy_wait_us(500);
+    busy_wait_us(10);
 
     // 4. Clear interrupt flags (RP2350 SDK handles this, but we ensure state is ready)
     // The next time the interrupt is enabled, it won't see "stale" noise.

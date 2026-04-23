@@ -241,11 +241,14 @@ void UpdateTouchCalibration(void)
 
 void FinishTouchCalibration(void)
 {
+    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
 
     Rectf(CALI_SCREEN_ERASE_X, CALI_SCREEN_ERASE_Y, CALI_SCREEN_ERASE_W, CALI_SCREEN_ERASE_H, BLACK);
 
     print_centered(FindCenterY(CALI_PROMPT_X, CALI_SCREEN_EDGE, "CALIBRATION COMPLETE", FONT_1),
                    "CALIBRATION COMPELTE", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
+
+    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
@@ -937,7 +940,6 @@ void WaitForInput(void)
 
                 if (current_val < (touch_baseline - sensitivity))
                 {
-                    // only works sometimes? when stepped through, works.
                     gpio_put(LED1, 0);
 
                     uint16_t new_X = ReadTouchX();

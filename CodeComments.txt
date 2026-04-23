@@ -14,6 +14,10 @@ touch_baseline or the MARGIN value being too large/too small.
 when it is called, but this may need to be done manually in the code as well since it is not triggering. If this manual fix is not possible/does not work, it is most certainly a pin configuration issue, and the Y_MINUS interrupt is never
 properly triggering because that pin is not being reset to the state it needs to be in for the interrupt.
 3. Get the cursor function to work (hopefully should automatically begin working with #2 is fixed)
+
+Updates:
+Moving the X and Y coordinate readings will offer consistent interrupt measurements. The cursor however is very slow, and sporadic. Not as precise as it is on the msp430.
+In addition, the logic behind why the code works is flawed. Should be remedied to be as robust as possible before moving on.
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260421RW: Creation of new CodeComments file, separate from the one on CCS (for the msp430f6779). Will just include comments regarding LCD development and connecting to the msp430f6779,
 will not contain any comments from the CCS file.

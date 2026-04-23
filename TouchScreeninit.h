@@ -27,7 +27,7 @@
 #define CALI_BOUNDS_MIN_X 1000  // Low threshold for calibration (near 0V)
 #define CALI_BOUNDS_MIN_Y 1000
 #define CALI_BOUNDS_MAX_X 3000 // High threshold for calibration (near max voltage)
-#define CALI_BOUNDS_MAX_Y 3500
+#define CALI_BOUNDS_MAX_Y 3000
 
 #define CAPTURE_CALI_COORDS_SAMPLES 16
 
@@ -36,18 +36,18 @@
 #define STABLE_COUNT_MIN 2
 
 #define CHECK_RELEASE 20
-#define AVERAGE_SAMPLES_RELEASE 4
+#define AVERAGE_SAMPLES_RELEASE 16
 
 #define MIN_RAW 4096            // change based on ADC resolution 2^n
 #define AVERAGE_READ_SAMPLES 18 // must be greater than 2 to allow for outlier removal
 
 #define CALI_OFFSET_X 15
 #define DISP_WIDTH 240
-#define X_COMPENSATION 180 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+#define X_COMPENSATION 50 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
 
 #define CALI_OFFSET_Y 15
 #define DISP_HEIGHT 320
-#define Y_COMPENSATION 180 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+#define Y_COMPENSATION 50 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
 
 extern volatile int screenTouched;
 extern int touch_init;
@@ -57,6 +57,8 @@ void TouchScreeninit(void);
 void TouchScreen_deinit(void);
 
 void TouchInterrupt(unsigned int, uint32_t);
+
+void TouchInterrupt_Helper(void);
 
 void CalibrateTouch(void);
 
