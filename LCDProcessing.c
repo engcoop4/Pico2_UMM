@@ -509,9 +509,6 @@ void PresetConfigs(void)
         numberdisplays = 1;
         break;
     }
-    // REMOVED FOR INITIAL TESTING. RESTORE EVENTUALLY
-    // current_screen = Screen_DisplayChannels;
-    // force_redraw = true;
 }
 
 // The various operating modes can set values like numberdisplays an input string for title, and desired unit
@@ -554,7 +551,7 @@ void DisplayChannels(void)
         // draw_pixel(219, 12, RED);
     }
 
-    // current_screen = InitializationDone;
+    current_screen = InitializationDone;
 }
 
 void InitYPositions(void)
@@ -660,7 +657,7 @@ void WaitForInput(void)
                 // P1IFG &= ~BIT0;       // Clear any "stale" flag from the 'Disabled' period
 
                 current_screen = Screen_TouchCalibration;
-                TouchScreeninit();    // Re-init pins and re-enable P1IE
+                TouchScreeninit(); // Re-init pins and re-enable P1IE
             }
             else
             {
@@ -677,58 +674,64 @@ void WaitForInput(void)
     // code at bottom will scan for X and Y coordinate values
     // kills interrupt - how does this work with how the R-Pi handles interrupts ?
     case Screen_TouchCalibration:
-        
-            if(touch_triggered) {
-                // 1. GATEKEEPER: Is the user touching the right general area?
-                if(CaliBoundsCheckTouch()) {
 
-                    if(cali == 0) {
-                        CaptureCaliCoordsTouch();
+        if (touch_triggered)
+        {
+            // 1. GATEKEEPER: Is the user touching the right general area?
+            if (CaliBoundsCheckTouch())
+            {
 
-                        // update cali value AFTER min values captured, update screen to indicate to user to remove finger
-                        UpdateTouchCalibration();
+                if (cali == 0)
+                {
+                    CaptureCaliCoordsTouch();
 
-                        // 4. WAIT: Don't move on until the finger is gone
-                        WaitForTouchRelease();
-                        touch_triggered = 0;
+                    // update cali value AFTER min values captured, update screen to indicate to user to remove finger
+                    UpdateTouchCalibration();
 
-                        // 5. RE-ARM: Clean up flags and re-enable interrupt
-                        //P1IFG &= ~BIT0;
-                        //P1IE |= BIT0;
-                    }
-                    else if (cali == 1) {
-                        // Repeat for the second point
-                        CaptureCaliCoordsTouch();
-
-                        WaitForTouchRelease();
-                        FinishTouchCalibration();
-                        current_screen = Screen_OperatingMode;
-
-                        //P1IFG &= ~BIT0;
-                        touch_triggered = 0;
-                        //P1IE |= BIT0;
-
-                        force_redraw = true;
-                    }
-                }
-                else {
-                    // FAILED BOUNDS: User touched the wrong spot.
-                    // We must still reset the flag/interrupt so they can try again.
+                    // 4. WAIT: Don't move on until the finger is gone
                     WaitForTouchRelease();
-                    //P1IFG &= ~BIT0;
                     touch_triggered = 0;
-                    //P1IE |= BIT0;
+
+                    // 5. RE-ARM: Clean up flags and re-enable interrupt
+                    // P1IFG &= ~BIT0;
+                    // P1IE |= BIT0;
+                }
+                else if (cali == 1)
+                {
+                    // Repeat for the second point
+                    CaptureCaliCoordsTouch();
+
+                    WaitForTouchRelease();
+                    FinishTouchCalibration();
+                    current_screen = Screen_OperatingMode;
+
+                    // P1IFG &= ~BIT0;
+                    touch_triggered = 0;
+                    // P1IE |= BIT0;
+
+                    force_redraw = true;
                 }
             }
-        
+            else
+            {
+                // FAILED BOUNDS: User touched the wrong spot.
+                // We must still reset the flag/interrupt so they can try again.
+                WaitForTouchRelease();
+                // P1IFG &= ~BIT0;
+                touch_triggered = 0;
+                // P1IE |= BIT0;
+            }
+        }
+
         break;
     // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
     // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
     case Screen_OperatingMode:
     {
-        
+
         // 1. TOUCH INPUT LOGIC
-        if (touch_triggered) {
+        if (touch_triggered)
+        {
             // Clear the ISR flag immediately so we don't loop on the same touch
             touch_triggered = 0;
 
@@ -737,13 +740,16 @@ void WaitForInput(void)
             Y_Cord = ReadTouchY();
 
             // Only process if the touch is valid (greater than 0)
-            if (X_Cord > 0 && Y_Cord > 0) {
+            if (X_Cord > 0 && Y_Cord > 0)
+            {
                 int i;
-                for (i = 0; i < 5; i++) {
+                for (i = 0; i < 5; i++)
+                {
                     // Logic: Start at 60Y, each box is 48px high, stepping by 52px
                     uint16_t row_top = 60 + (52 * i);
 
-                    if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48)) {
+                    if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48))
+                    {
                         cursor_position = i;
                         UpdateOperatingModeSelection();
 
@@ -757,7 +763,6 @@ void WaitForInput(void)
             // Re-enable interrupt for next touch event
             gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
         }
-        
 
         // 2. PHYSICAL BUTTON LOGIC
         // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
@@ -786,6 +791,8 @@ void WaitForInput(void)
                 // Path A: One of the 4 Presets was selected
                 entry_method = ENTRY_PRESET;
                 PresetConfigs(); // This function must set current_screen = InitializationDone
+                current_screen = Screen_DisplayChannels;
+                force_redraw = true;
             }
             else
             {
@@ -910,13 +917,16 @@ void WaitForInput(void)
     }
 
     // LEDs and cursor used for tracking touch, not included in final implementation
-    if(current_screen != Screen_TouchCalibration) {
-        if (touch_init) {
-            if (touch_triggered) {
+    if (current_screen != Screen_TouchCalibration)
+    {
+        if (touch_init)
+        {
+            if (touch_triggered)
+            {
                 // waits for voltage to stabilize before taking reading
                 // used because some boards have high resistance/noisier environment and sometimes miss touches (board #6)
                 uint16_t current_val = CalculateTouch_Stable();
-                uint16_t sensitivity = 2000;        // (500 * 4096) / 1024 = 2000
+                uint16_t sensitivity = 2000; // (500 * 4096) / 1024 = 2000
 
                 static uint16_t last_X = 0;
                 static uint16_t last_Y = 0;
@@ -924,36 +934,46 @@ void WaitForInput(void)
                 static uint8_t is_dragging = 0;
                 static uint8_t filter_block_count = 0;
 
-                if (current_val < (touch_baseline - sensitivity)) {
+                if (current_val < (touch_baseline - sensitivity))
+                {
                     gpio_put(LED3, 0);
 
                     uint16_t new_Y = ReadTouchY();
                     uint16_t new_X = ReadTouchX();
 
-                    if (!is_dragging) {
+                    if (!is_dragging)
+                    {
                         X_Cord = new_X;
                         Y_Cord = new_Y;
                         is_dragging = 1;
                         filter_block_count = 0;
-                    } else {
+                    }
+                    else
+                    {
                         int16_t dx = (int16_t)new_X - (int16_t)last_X;
                         int16_t dy = (int16_t)new_Y - (int16_t)last_Y;
-                        if (dx < 0) dx = -dx;
-                        if (dy < 0) dy = -dy;
+                        if (dx < 0)
+                            dx = -dx;
+                        if (dy < 0)
+                            dy = -dy;
 
                         // "self-healing" delta filter
                         // checks to see if new data value is valid (counteracts voltage spikes)
-                        if (dx < 25 && dy < 25) {
+                        if (dx < 25 && dy < 25)
+                        {
                             X_Cord = new_X;
                             Y_Cord = new_Y;
                             filter_block_count = 0; // if new coordinate within range, set new reference point
-                        } else {
+                        }
+                        else
+                        {
                             // increment counter if jump was too large
                             filter_block_count++;
 
                             // if jump is blocked more than 8 times in a row but the screen is still being touched
                             // assign new position because the filter has become stuck on a bad reading
-                            if (filter_block_count > 8) {
+                            if (filter_block_count > 8)
+                            {
                                 X_Cord = new_X;
                                 Y_Cord = new_Y;
                                 filter_block_count = 0;
@@ -964,20 +984,19 @@ void WaitForInput(void)
                     last_X = X_Cord;
                     last_Y = Y_Cord;
                     Rectf(X_Cord, Y_Cord, 2, 2, CYAN);
-
-                } else {
-                    //P5OUT |= BIT4;    // LED OFF
+                }
+                else
+                {
+                    gpio_put(LED3, 1);      // LED off
                     is_dragging = 0;        // reset
                     filter_block_count = 0; // clear counter
 
-
                     // re-enable interrupt
                     touch_triggered = 0;
-                    //P1IFG &= ~BIT0;
-                    //P1IE |= BIT0;
+                    // P1IFG &= ~BIT0;
+                    // P1IE |= BIT0;
                 }
             }
         }
     }
-    
 }
