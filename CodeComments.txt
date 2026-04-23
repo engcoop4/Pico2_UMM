@@ -1,2 +1,19 @@
+20260423RW: Touch screen allows for calibration to be performed (seemingly correctly, so equations are good). Most of the time, an operating mode screen can be chosen after calibration is completed. If a preset is chosen,
+it will immediately launch to display screen. If CUSTOM is chosen, it will enter Number of Displays screen. From here, there is an LED to register touches and a cursor implemented to track accuracy of calibration. There is an error in the
+interrupt, as I suspect it is misfiring during transitionary screens. From the second calibration circle screen to the calibration complete screen, it seems that if the screen is tapped, it will "lock out" of the interrupt, not allowing the user to
+make a selection on the next screen. This also means the LEDs and the cursor do not work. When this does not occur, a selection can be made, and the LEDs will work sometimes. The cursor appears to never work. If CUSTOM is selected, the touch
+interrupt stops working on the number of displays screen.
+
+It seems the ultimate root issue here stems from the interrupt not correctly firing, which I suspect is due to pin configuration and how the coordinate code is operating. My guess is that when measuring the values,
+the pins are not being re-initialized in the correct manner, so it will trigger the interrupt once more, and then never again.
+
+Main tasks that must be fixed:
+1. Improve the WaitForTouchRelease function. If this is truly causing interrupt misfires when the screen changes, then the program is not fully operable/is not detecting the release correctly. This could possibly be an issue with
+touch_baseline or the MARGIN value being too large/too small.
+2. Figure out how to re-enable interrupts consistently after measurements are taken. In theory, the callback function used for the interrupts should allow the interrupt enable flags to be automatically cleared and set 
+when it is called, but this may need to be done manually in the code as well since it is not triggering. If this manual fix is not possible/does not work, it is most certainly a pin configuration issue, and the Y_MINUS interrupt is never
+properly triggering because that pin is not being reset to the state it needs to be in for the interrupt.
+3. Get the cursor function to work (hopefully should automatically begin working with #2 is fixed)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260421RW: Creation of new CodeComments file, separate from the one on CCS (for the msp430f6779). Will just include comments regarding LCD development and connecting to the msp430f6779,
 will not contain any comments from the CCS file.

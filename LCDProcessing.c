@@ -8,6 +8,7 @@
  */
 
 #include "LCDProcessing.h"
+#include "Hardware.h"
 #include "TouchScreeninit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -936,10 +937,11 @@ void WaitForInput(void)
 
                 if (current_val < (touch_baseline - sensitivity))
                 {
-                    gpio_put(LED3, 0);
+                    // only works sometimes? when stepped through, works.
+                    gpio_put(LED1, 0);
 
-                    uint16_t new_Y = ReadTouchY();
                     uint16_t new_X = ReadTouchX();
+                    uint16_t new_Y = ReadTouchY();
 
                     if (!is_dragging)
                     {
@@ -987,14 +989,13 @@ void WaitForInput(void)
                 }
                 else
                 {
-                    gpio_put(LED3, 1);      // LED off
+                    gpio_put(LED1, 1);      // LED off
                     is_dragging = 0;        // reset
                     filter_block_count = 0; // clear counter
 
-                    // re-enable interrupt
                     touch_triggered = 0;
-                    // P1IFG &= ~BIT0;
-                    // P1IE |= BIT0;
+                    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
+                    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
                 }
             }
         }
