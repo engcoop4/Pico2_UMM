@@ -225,6 +225,11 @@ void TouchCalibration(void)
     // first calibration circle
     Circlef(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, RED);
     Circle(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, WHITE);
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 void UpdateTouchCalibration(void)
@@ -241,14 +246,23 @@ void UpdateTouchCalibration(void)
 
 void FinishTouchCalibration(void)
 {
+<<<<<<< Updated upstream
     gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
 
+=======
+    screen_updating = true;
+>>>>>>> Stashed changes
     Rectf(CALI_SCREEN_ERASE_X, CALI_SCREEN_ERASE_Y, CALI_SCREEN_ERASE_W, CALI_SCREEN_ERASE_H, BLACK);
 
     print_centered(FindCenterY(CALI_PROMPT_X, CALI_SCREEN_EDGE, "CALIBRATION COMPLETE", FONT_1),
                    "CALIBRATION COMPELTE", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
+<<<<<<< Updated upstream
 
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
@@ -275,11 +289,20 @@ void OperatingMode(void)
 
     // Draw the cursor highlight at its current position
     Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 void UpdateOperatingModeSelection(void)
 {
+<<<<<<< Updated upstream
     int i;
+=======
+    screen_updating = true;
+>>>>>>> Stashed changes
     // 1. Draw a "Neutral" state (Black boxes) over the highlight areas
     // This effectively "erases" the old white selection border
     for (i = 0; i < NUMBER_OF_MODES; i++)
@@ -290,6 +313,11 @@ void UpdateOperatingModeSelection(void)
 
     Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
     title_index = cursor_position;
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 // Shows number of displays and implements UP as a +1 and DOWN as a -1. Minimum is 1, maximum is 7
@@ -330,6 +358,11 @@ void NumberOfDisplays(void)
     }
 
     UpdateNumberOfDisplays();
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 void UpdateNumberOfDisplays(void)
@@ -350,6 +383,11 @@ void UpdateNumberOfDisplays(void)
     print(FindCenterX(U_NUMD_CLEAR_X, U_NUMD_CLEAR_W, "1", FONT_3),
           FindCenterY(U_NUMD_CLEAR_Y, y, "1", FONT_3),
           display, RED, WHITE, FONT_3, FONT_3, SCREEN_EDGE_X);
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 // modify to have condensed screen if touch_init initialized (use touch_init * [factor]) to adjust bounds ?, 0 means no bounds adjustment, 1 means bounds adjustment)
@@ -397,6 +435,11 @@ void ChannelSelection(void)
     }
 
     UpdateChannelSelection();
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 void UpdateChannelSelection(void)
@@ -481,6 +524,11 @@ void UpdateChannelSelection(void)
               FindCenterY(ycord[idx] - (touch_init * U_CHANSEL_SBOX_PRINT_Y_T_F), U_CHANSEL_SBOX_PRINT_H - (touch_init * U_CHANSEL_SBOX_PRINT_H_T_F), "0", FONT_1),
               chan_sel, WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 // Can alter preset configurations
@@ -556,6 +604,11 @@ void DisplayChannels(void)
     }
 
     current_screen = InitializationDone;
+<<<<<<< Updated upstream
+=======
+    screen_updating = false;
+    TouchInterrupt_Helper();
+>>>>>>> Stashed changes
 }
 
 void InitYPositions(void)

@@ -24,7 +24,7 @@
 
 #define CALIBRATE_SAMPLES 16
 
-#define CALI_BOUNDS_MIN_X 1000  // Low threshold for calibration (near 0V)
+#define CALI_BOUNDS_MIN_X 1000 // Low threshold for calibration (near 0V)
 #define CALI_BOUNDS_MIN_Y 1000
 #define CALI_BOUNDS_MAX_X 3000 // High threshold for calibration (near max voltage)
 #define CALI_BOUNDS_MAX_Y 3000
@@ -42,12 +42,21 @@
 #define AVERAGE_READ_SAMPLES 18 // must be greater than 2 to allow for outlier removal
 
 #define CALI_OFFSET_X 15
+<<<<<<< Updated upstream
 #define DISP_WIDTH 240
 #define X_COMPENSATION 50 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
 
 #define CALI_OFFSET_Y 15
 #define DISP_HEIGHT 320
 #define Y_COMPENSATION 50 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+=======
+#define DISP_WIDTH 250     // + 10 to screen width to help with equations (cursor shows this helps scale the screen)
+#define X_COMPENSATION 180 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+
+#define CALI_OFFSET_Y 15
+#define DISP_HEIGHT 330    // + 10 to screen width to help with equations (cursor shows this helps scale the screen)
+#define Y_COMPENSATION 180 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+>>>>>>> Stashed changes
 
 extern volatile int screenTouched;
 extern int touch_init;

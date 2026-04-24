@@ -1,3 +1,15 @@
+20260424RW: Improvements made to cursor function, most likely could continue to be improved upon but the cursor itself is a testing function and will not be in the final implementation
+so it is not a high priority. It is used primarily to fine-tune equations for touch accuracy.
+
+Interrupt hangs during screen changes have been nullified with two implementations: a "gate" for the interrupts that prevent them from firing if the screen is currently drawing (no
+communication issues over the SPI bus), and the TouchInterrupt_Helper has been added to the end of these drawing functions. My theory is that for some reason, the LCD drawing was causing
+the pins (specifically Y- since it is the interrupt) to misbehave, and this resulted in the interrupt getting stuck or not working. My manually resetting the pin assignment during each
+screen change, this will not happen. Possibly overkill, but using the function does not result in any severe/noticeable downtime or lag at this time.
+
+Modifications were made to the equations based on the cursors tracking to allow the pixel values to stretch all the way to the edge of the screens, rather than getting cut off at around
+~15 pixels from the edges. This most likely has something to do with how the calibration circles treat the voltage readings they receive (i.e., highest voltage reading is ideally ~15 pixels
+to the left of the right edge per calibration method), so to compensate the screen "size" was extended by 10 for both the width and height. 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260423RW: Touch screen allows for calibration to be performed (seemingly correctly, so equations are good). Most of the time, an operating mode screen can be chosen after calibration is completed. If a preset is chosen,
 it will immediately launch to display screen. If CUSTOM is chosen, it will enter Number of Displays screen. From here, there is an LED to register touches and a cursor implemented to track accuracy of calibration. There is an error in the
 interrupt, as I suspect it is misfiring during transitionary screens. From the second calibration circle screen to the calibration complete screen, it seems that if the screen is tapped, it will "lock out" of the interrupt, not allowing the user to
