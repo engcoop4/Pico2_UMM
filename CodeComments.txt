@@ -9,6 +9,8 @@ screen change, this will not happen. Possibly overkill, but using the function d
 Modifications were made to the equations based on the cursors tracking to allow the pixel values to stretch all the way to the edge of the screens, rather than getting cut off at around
 ~15 pixels from the edges. This most likely has something to do with how the calibration circles treat the voltage readings they receive (i.e., highest voltage reading is ideally ~15 pixels
 to the left of the right edge per calibration method), so to compensate the screen "size" was extended by 10 for both the width and height. 
+
+Merge of branches successful (?)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260423RW: Touch screen allows for calibration to be performed (seemingly correctly, so equations are good). Most of the time, an operating mode screen can be chosen after calibration is completed. If a preset is chosen,
 it will immediately launch to display screen. If CUSTOM is chosen, it will enter Number of Displays screen. From here, there is an LED to register touches and a cursor implemented to track accuracy of calibration. There is an error in the
