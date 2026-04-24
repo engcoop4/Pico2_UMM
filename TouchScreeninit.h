@@ -41,13 +41,13 @@
 #define MIN_RAW 4096            // change based on ADC resolution 2^n
 #define AVERAGE_READ_SAMPLES 18 // must be greater than 2 to allow for outlier removal
 
-#define CALI_OFFSET_X 15
+#define CALI_OFFSET_X 5
 #define DISP_WIDTH 240
-#define X_COMPENSATION 50 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+#define X_COMPENSATION 180 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
 
 #define CALI_OFFSET_Y 15
 #define DISP_HEIGHT 320
-#define Y_COMPENSATION 50 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
+#define Y_COMPENSATION 180 // for 10-bit ADC, 45 was about 14 pixels, so it must be scaled up to 180 (?)
 
 extern volatile int screenTouched;
 extern int touch_init;

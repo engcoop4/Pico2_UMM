@@ -42,6 +42,7 @@ int cali;
 extern uint16_t touch_baseline;
 extern volatile uint16_t touch_triggered;
 extern volatile uint8_t return_request_flag;
+extern volatile bool screen_updating;
 
 static int lastB1 = 0;     // last button state SW1 (UP)
 static int lastB2 = 0;     // last button state SW2 (DOWN)
@@ -216,6 +217,7 @@ void UpdateTouchHighlight(void)
 // screen for user to set-up touch calibration
 void TouchCalibration(void)
 {
+    screen_updating = true;
     LCD_Clear(BLACK);
     cali = 0;
 
@@ -225,6 +227,7 @@ void TouchCalibration(void)
     // first calibration circle
     Circlef(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, RED);
     Circle(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, WHITE);
+    screen_updating = false;
 }
 
 void UpdateTouchCalibration(void)
@@ -241,19 +244,18 @@ void UpdateTouchCalibration(void)
 
 void FinishTouchCalibration(void)
 {
-    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
-
+screen_updating = true;
     Rectf(CALI_SCREEN_ERASE_X, CALI_SCREEN_ERASE_Y, CALI_SCREEN_ERASE_W, CALI_SCREEN_ERASE_H, BLACK);
 
     print_centered(FindCenterY(CALI_PROMPT_X, CALI_SCREEN_EDGE, "CALIBRATION COMPLETE", FONT_1),
                    "CALIBRATION COMPELTE", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
-
-    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+screen_updating = false;
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
 void OperatingMode(void)
 {
+    screen_updating = true;
     uint8_t i;
 
     LCD_Clear(BLACK);
@@ -275,14 +277,15 @@ void OperatingMode(void)
 
     // Draw the cursor highlight at its current position
     Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
+    screen_updating = false;
 }
 
 void UpdateOperatingModeSelection(void)
 {
-    int i;
+   screen_updating = true;
     // 1. Draw a "Neutral" state (Black boxes) over the highlight areas
     // This effectively "erases" the old white selection border
-    for (i = 0; i < NUMBER_OF_MODES; i++)
+    for (int i = 0; i < NUMBER_OF_MODES; i++)
     {
 
         Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * i)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, BLACK);
@@ -290,12 +293,14 @@ void UpdateOperatingModeSelection(void)
 
     Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
     title_index = cursor_position;
+    screen_updating = false;
 }
 
 // Shows number of displays and implements UP as a +1 and DOWN as a -1. Minimum is 1, maximum is 7
 // Holding SW1 for 3 seconds maxs to 7, holding SW2 for 3 seconds decrements to 1 immediately (not implemented yet)
 void NumberOfDisplays(void)
 {
+    screen_updating = true;
     LCD_Clear(BLACK);
 
     Rectf(NUMD_HEAD_X, NUMD_HEAD_Y, NUMD_HEAD_W, NUMD_HEAD_H, WHITE);
@@ -330,10 +335,12 @@ void NumberOfDisplays(void)
     }
 
     UpdateNumberOfDisplays();
+    screen_updating = false;
 }
 
 void UpdateNumberOfDisplays(void)
 {
+    screen_updating = true;
     int y;
     // ResetLCDMapping();
 
@@ -350,11 +357,13 @@ void UpdateNumberOfDisplays(void)
     print(FindCenterX(U_NUMD_CLEAR_X, U_NUMD_CLEAR_W, "1", FONT_3),
           FindCenterY(U_NUMD_CLEAR_Y, y, "1", FONT_3),
           display, RED, WHITE, FONT_3, FONT_3, SCREEN_EDGE_X);
+          screen_updating = false;
 }
 
 // modify to have condensed screen if touch_init initialized (use touch_init * [factor]) to adjust bounds ?, 0 means no bounds adjustment, 1 means bounds adjustment)
 void ChannelSelection(void)
 {
+    screen_updating = true;
     LCD_Clear(BLACK);
 
     lcd_change = 1;
@@ -397,10 +406,12 @@ void ChannelSelection(void)
     }
 
     UpdateChannelSelection();
+    screen_updating = false;
 }
 
 void UpdateChannelSelection(void)
 {
+    screen_updating = true;
     static int last_num = -1;
     static int last_idx = -1;
     int i;
@@ -481,11 +492,13 @@ void UpdateChannelSelection(void)
               FindCenterY(ycord[idx] - (touch_init * U_CHANSEL_SBOX_PRINT_Y_T_F), U_CHANSEL_SBOX_PRINT_H - (touch_init * U_CHANSEL_SBOX_PRINT_H_T_F), "0", FONT_1),
               chan_sel, WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
+    screen_updating = false;
 }
 
 // Can alter preset configurations
 void PresetConfigs(void)
 {
+    screen_updating = true;
     // Use cursor_position as index for
     // Preset configs used only to update variables that DisplayChannels will use, does not execute its own screen so goes immediately into DisplayChannels using current_screen indexing
     selected_display = cursor_position;
@@ -513,13 +526,14 @@ void PresetConfigs(void)
         numberdisplays = 1;
         break;
     }
+    screen_updating = false;
 }
 
 // The various operating modes can set values like numberdisplays an input string for title, and desired unit
 // the main differences will be which channel goes to which display
 void DisplayChannels(void)
 {
-    int i;
+    screen_updating = true;
     LCD_Clear(BLACK);
     InitYPositions();
 
@@ -530,7 +544,7 @@ void DisplayChannels(void)
 
     // determine number of rectangles needed based on numberdisplays
 
-    for (i = 0; i < numberdisplays; i++)
+    for (int i = 0; i < numberdisplays; i++)
     { // Execute draw rectangle based on how many displays there are
         char conv = i + DISPCHAN_CONV_F;
         sprintf(header, "%c:", conv);
@@ -556,6 +570,7 @@ void DisplayChannels(void)
     }
 
     current_screen = InitializationDone;
+    screen_updating = false;
 }
 
 void InitYPositions(void)
