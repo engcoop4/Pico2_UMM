@@ -20,6 +20,7 @@ extern int cali;
 volatile uint16_t touch_triggered;
 extern uint32_t X_Cord;
 extern uint32_t Y_Cord;
+volatile bool screen_updating = false;
 
 uint16_t touch_baseline = 0;
 
@@ -111,6 +112,12 @@ void TouchScreen_deinit(void)
 // aka, the interrupt logic now lives in this function
 void TouchInterrupt(uint gpio, uint32_t events)
 {
+    if (screen_updating)
+    {
+        // Must acknowledge so the interrupt doesn't immediately re-fire
+        gpio_acknowledge_irq(gpio, events);
+        return;
+    }
     // only act if the interrupt came from the Y_MINUS pin
     if (gpio == Y_MINUS)
     {
@@ -366,7 +373,7 @@ uint16_t ReadTouchX(void)
         avg_raw = TS_X_MAX;
 
     float scale = (float)TARGET_WIDTH / (float)(TS_X_MAX - adj_min_x);
-    uint16_t x_pixel = (uint16_t)((avg_raw - adj_min_x) * scale + 0.5f) + CALI_OFFSET_X;
+    uint16_t x_pixel = (uint16_t)((avg_raw - adj_min_x) * scale + 0.5f) + (CALI_OFFSET_X / 2);
 
     return x_pixel;
 }
@@ -390,7 +397,7 @@ uint16_t ReadTouchX_Raw(void)
     adc_gpio_init(Y_PLUS);
 
     // 4. Settle time - Use busy_wait to avoid the time.c hang
-    busy_wait_us(1000);
+    busy_wait_us(250);
 
     // 5. Trigger a SINGLE conversion
     // This is the "Nuclear" alternative to a full adc_init
@@ -437,7 +444,7 @@ uint16_t ReadTouchY(void)
         avg_raw = TS_Y_MAX;
 
     float scale = (float)TARGET_HEIGHT / (float)(TS_Y_MAX - adj_min_y);
-    uint16_t y_pixel = (uint16_t)((avg_raw - adj_min_y) * scale + 0.5f) + CALI_OFFSET_Y;
+    uint16_t y_pixel = (uint16_t)((avg_raw - adj_min_y) * scale + 0.5f) + (CALI_OFFSET_Y / 2);
 
     return y_pixel;
 }
@@ -465,7 +472,7 @@ uint16_t ReadTouchY_Raw(void)
     gpio_disable_pulls(X_PLUS);
 
     // 5. Settle time - Use busy_wait to prevent time.c deadlock
-    busy_wait_us(1000);
+    busy_wait_us(250);
 
     // 6. Trigger a SINGLE conversion
     result = adc_read();
