@@ -35,38 +35,27 @@ uint16_t TS_Y_MAX = 3400;
 
 void TouchScreeninit(void)
 {
-
     touch_init = 1;
 
     adc_init();
-    adc_run(false); // Enable ADC
 
     // initialize GPIOs for touch screen
-    gpio_init(X_PLUS);
-    gpio_init(X_MINUS);
-    adc_gpio_init(Y_PLUS); // Y+ needs to be ADC input for touch detection
-    gpio_init(Y_MINUS);
+    TouchInterrupt_Helper();
 
-    // Set pins appropriately for touch detection
-    gpio_set_dir(X_PLUS, GPIO_OUT); // X+ as output (will be driven low)
-    gpio_put(X_PLUS, 0);
-    gpio_set_dir(X_MINUS, GPIO_OUT); // X- as output (will be driven low)
-    gpio_put(X_MINUS, 0);
+    busy_wait_ms(10);
 
-    // Y+ is already ADC input from adc_gpio_init
-    gpio_set_dir(Y_MINUS, GPIO_IN); // Y- as input for interrupt
+    adc_run(true); // Enable ADC
+    CalibrateTouch();
 
-    // Enable pull-up on Y- for touch detection
-    gpio_pull_up(Y_MINUS);
-
-    // Disable pulls on other pins
+    gpio_set_dir(X_PLUS, GPIO_IN);
+    gpio_set_dir(X_MINUS, GPIO_IN);
+    gpio_set_dir(Y_PLUS, GPIO_IN);
     gpio_disable_pulls(X_PLUS);
     gpio_disable_pulls(X_MINUS);
     gpio_disable_pulls(Y_PLUS);
 
-    busy_wait_ms(10);
-
-    CalibrateTouch();
+    // 2. Point the ADC at your Button Ladder (Channel 2)
+    adc_select_input(2);
 
     // enable interrupts on Y- pin for touch detection
     gpio_set_irq_enabled_with_callback(Y_MINUS, GPIO_IRQ_EDGE_FALL, true, &TouchInterrupt);
@@ -121,6 +110,7 @@ void TouchInterrupt(uint gpio, uint32_t events)
     // only act if the interrupt came from the Y_MINUS pin
     if (gpio == Y_MINUS)
     {
+        TouchInterrupt_Helper();
         // set software flag
         touch_triggered = 1;
 
@@ -175,6 +165,7 @@ void CalibrateTouch(void)
 
 uint16_t CalculateTouch(void)
 {
+    adc_run(false);
     // Set X pins to ground (drive X-axis)
     gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_set_dir(X_MINUS, GPIO_OUT);
