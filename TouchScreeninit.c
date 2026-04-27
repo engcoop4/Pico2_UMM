@@ -151,6 +151,29 @@ void TouchInterrupt_Helper(void)
     gpio_disable_pulls(Y_PLUS);
 }
 
+void TouchToButtons(void)
+{
+// 1. Reset software flag
+    touch_triggered = 0;
+
+    // 2. Park touch pins as High-Z Inputs
+    // We use set_dir instead of gpio_init to avoid wiping the IRQ config
+    gpio_set_dir(X_PLUS, GPIO_IN);
+    gpio_set_dir(X_MINUS, GPIO_IN);
+    gpio_set_dir(Y_PLUS, GPIO_IN);
+    
+    // 3. Ensure Y- is an input with Pull-Up for the next touch
+    gpio_set_dir(Y_MINUS, GPIO_IN);
+    gpio_pull_up(Y_MINUS);
+
+    // 4. Point ADC to Buttons
+    adc_select_input(2);
+
+    // 5. Clear and Re-enable Interrupt
+    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
+    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+}
+
 void CalibrateTouch(void)
 {
     uint32_t accumulator = 0;

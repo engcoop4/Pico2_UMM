@@ -595,8 +595,15 @@ void WaitForInput(void)
 
     // CRITICAL: Only read button ADC if touch is DISABLED to avoid concurrent ADC access
     // When touch is enabled, it has priority over button inputs
-    if (!touch_init)
+    if (touch_triggered)
     {
+        adc_select_input(0);
+    }
+    else if (!touch_triggered)
+    {
+        adc_select_input(2);
+        busy_wait_us(10);
+
         uint16_t adc_val = adc_read(); // take adc value
 
         // no buttons pressed if falls under 500, "unlocks"
@@ -759,6 +766,9 @@ void WaitForInput(void)
             // Read fresh coordinates (this includes the settling delay internally)
             X_Cord = ReadTouchX();
             Y_Cord = ReadTouchY();
+
+            // switch from coordinate reading to button inputs
+            TouchToButtons();
 
             // Only process if the touch is valid (greater than 0)
             if (X_Cord > 0 && Y_Cord > 0)
@@ -940,82 +950,82 @@ void WaitForInput(void)
     // LEDs and cursor used for tracking touch, not included in final implementation
     if (current_screen != Screen_TouchCalibration)
     {
-        if (touch_init)
+        if (touch_init && touch_triggered)
         {
-            if (touch_triggered)
+            // waits for voltage to stabilize before taking reading
+            // used because some boards have high resistance/noisier environment and sometimes miss touches (board #6)
+            uint16_t current_val = CalculateTouch_Stable();
+            uint16_t sensitivity = 2000; // (500 * 4096) / 1024 = 2000
+
+            static uint16_t last_X = 0;
+            static uint16_t last_Y = 0;
+            // finger being dragged (not likely to be used in official implementation, since touch screen acts more as button presses? but maybe)
+            static uint8_t is_dragging = 0;
+            static uint8_t filter_block_count = 0;
+
+            if (current_val < (touch_baseline - sensitivity))
             {
-                // waits for voltage to stabilize before taking reading
-                // used because some boards have high resistance/noisier environment and sometimes miss touches (board #6)
-                uint16_t current_val = CalculateTouch_Stable();
-                uint16_t sensitivity = 2000; // (500 * 4096) / 1024 = 2000
+                gpio_put(LED1, 0);
 
-                static uint16_t last_X = 0;
-                static uint16_t last_Y = 0;
-                // finger being dragged (not likely to be used in official implementation, since touch screen acts more as button presses? but maybe)
-                static uint8_t is_dragging = 0;
-                static uint8_t filter_block_count = 0;
+                uint16_t new_X = ReadTouchX();
+                uint16_t new_Y = ReadTouchY();
 
-                if (current_val < (touch_baseline - sensitivity))
+                if (!is_dragging)
                 {
-                    gpio_put(LED1, 0);
-
-                    uint16_t new_X = ReadTouchX();
-                    uint16_t new_Y = ReadTouchY();
-
-                    if (!is_dragging)
-                    {
-                        X_Cord = new_X;
-                        Y_Cord = new_Y;
-                        is_dragging = 1;
-                        filter_block_count = 0;
-                    }
-                    else
-                    {
-                        int16_t dx = (int16_t)new_X - (int16_t)last_X;
-                        int16_t dy = (int16_t)new_Y - (int16_t)last_Y;
-                        if (dx < 0)
-                            dx = -dx;
-                        if (dy < 0)
-                            dy = -dy;
-
-                        // "self-healing" delta filter
-                        // checks to see if new data value is valid (counteracts voltage spikes)
-                        if (dx < 25 && dy < 25)
-                        {
-                            X_Cord = new_X;
-                            Y_Cord = new_Y;
-                            filter_block_count = 0; // if new coordinate within range, set new reference point
-                        }
-                        else
-                        {
-                            // increment counter if jump was too large
-                            filter_block_count++;
-
-                            // if jump is blocked more than 8 times in a row but the screen is still being touched
-                            // assign new position because the filter has become stuck on a bad reading
-                            if (filter_block_count > 8)
-                            {
-                                X_Cord = new_X;
-                                Y_Cord = new_Y;
-                                filter_block_count = 0;
-                            }
-                        }
-                    }
-
-                    last_X = X_Cord;
-                    last_Y = Y_Cord;
-                    Rectf(X_Cord, Y_Cord, 2, 2, CYAN);
+                    X_Cord = new_X;
+                    Y_Cord = new_Y;
+                    is_dragging = 1;
+                    filter_block_count = 0;
                 }
                 else
                 {
-                    gpio_put(LED1, 1);      // LED off
-                    is_dragging = 0;        // reset
-                    filter_block_count = 0; // clear counter
+                    int16_t dx = (int16_t)new_X - (int16_t)last_X;
+                    int16_t dy = (int16_t)new_Y - (int16_t)last_Y;
+                    if (dx < 0)
+                        dx = -dx;
+                    if (dy < 0)
+                        dy = -dy;
 
-                    touch_triggered = 0;
-                    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
-                    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+                    // "self-healing" delta filter
+                    // checks to see if new data value is valid (counteracts voltage spikes)
+                    if (dx < 25 && dy < 25)
+                    {
+                        X_Cord = new_X;
+                        Y_Cord = new_Y;
+                        filter_block_count = 0; // if new coordinate within range, set new reference point
+                    }
+                    else
+                    {
+                        // increment counter if jump was too large
+                        filter_block_count++;
+
+                        // if jump is blocked more than 8 times in a row but the screen is still being touched
+                        // assign new position because the filter has become stuck on a bad reading
+                        if (filter_block_count > 8)
+                        {
+                            X_Cord = new_X;
+                            Y_Cord = new_Y;
+                            filter_block_count = 0;
+                        }
+                    }
                 }
+
+                last_X = X_Cord;
+                last_Y = Y_Cord;
+                Rectf(X_Cord, Y_Cord, 2, 2, CYAN);
+            }
+            else
+            {
+                gpio_put(LED1, 1);      // LED off
+                is_dragging = 0;        // reset
+                filter_block_count = 0; // clear counter
+
+                touch_triggered = 0;
+
+                adc_select_input(2);
+                
+                gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
+                gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
             }
         }
     }

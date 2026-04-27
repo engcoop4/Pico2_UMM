@@ -60,6 +60,8 @@ void TouchInterrupt(unsigned int, uint32_t);
 
 void TouchInterrupt_Helper(void);
 
+void TouchToButtons(void);
+
 void CalibrateTouch(void);
 
 uint16_t CalculateTouch(void);
