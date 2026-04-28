@@ -61,11 +61,11 @@ char FW_Date[] = "16-Jun-2025";
 char FW_PartNumber[] = "866-501-A";
 uint8 wrk_str[HOST_XMT_BUFF_LEN]; // building & sending msg
 
-uint16 CopyConstString(char FL *str_f_ptr, char *dest);
+uint16 CopyConstString(char *str_f_ptr, char *dest);
 char CMD_index;
 
 // calibration commands
-char FL *CalNames[8] = {
+char *CalNames[8] = {
     // IK20250130 be careful with the length, I reserved only 40 bytes for a temporary string in stack in function SetGetCalParam(void) - char Cal_Name[40];
     "BatteryVolts",    // Y1 X1 Y2 X2 Battery Voltage calibration
     "FaultVolts",      // Y1 X1 Y2 X2 Fault Voltage calibration
@@ -299,6 +299,7 @@ char *putfloat_n(float x, int n)
     return buffer;
 }
 
+#define cputs(x) printf("%s", x)
 void float_print(const char *f, const float fx) /* f ="%t.df" t-before, d -after dot */
 {
     int exp = 0;

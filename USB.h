@@ -7,7 +7,7 @@
  * @copyright Copyright (c) 2026
  */
 
- #ifndef USB_H_
- #define USB_H_
+#ifndef USB_H_
+#define USB_H_
 
- #endif /* USB_H_ */
+#endif /* USB_H_ */

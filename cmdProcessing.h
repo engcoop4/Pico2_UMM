@@ -5,121 +5,34 @@
  *      Author: engcoop#3
  */
 
+#ifndef CMDPROCESSING_H_
+#define CMDPROCESSING_H_
+
+#include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include "pico/stdlib.h"
 
-#ifndef CMDPROCESSINGTEST_H_
-#define CMDPROCESSINGTEST_H_
+// Define standard types to match your legacy naming if preferred
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef unsigned char Uchar;
 
-typedef signed char         Schar;
-typedef unsigned char       Uchar;
-typedef unsigned short int  uint16;
-typedef unsigned long       uint32;
-typedef unsigned int        uint;
-typedef short int           Int16;
-typedef long                Int32;
-typedef char                Boolean;
-typedef unsigned char       uint8;
-typedef unsigned long       DWORD;
+// Bit Definitions (RP2350 Equivalent of BIT0, BIT1...)
+#define BIT_0 (1u << 0)
+#define BIT_1 (1u << 1)
+#define BIT_7 (1u << 7)
 
-#define testBitNo(var, bit_no)   (var & (1 << bit_no)) // values 0 or NOT_ZERO
-#define setBitNo(var, bit_no)    (var |= (1 << bit_no))
-#define clearBitNo(var, bit_no)    (var &= ~(1 << bit_no))
-#define updateBitNo(var, bit_no, source)   (var = (var & (~(1 << bit_no))) | (source & (1 << bit_no)))
-#define writeBitNo(var, bit_no, value)   (var = (var & (~(1 << bit_no))) | (value << bit_no))
-#define setBit(var, bit_value)      (var |= bit_value)      //bit_value is Bit_XX, =2^Bit_XX
-#define clearBit(var, bit_value)    (var &= ~(bit_value))
-#define toggleBit(var, bit_value)   (var ^= bit_value)      //0-bit becomes 1, 1-bit becomes 0
-#define testBit(var, bit_value)     (var & bit_value)
-#define CMD_LEN 4
-#define BIT11 2048
-#define BIT12 4096
-#define BIT13 8192
-#define BIT14 16384
-#define SinglePhase_eq0_3ph_eq1_Bit  BIT11
-#define ADC0_DISPLAY1_BIT            BIT12
-#define ADC0_DISPLAY2_BIT            BIT13
-#define ADC0_DISPLAY3_BIT            BIT14
+// Host Flags (Replaces your old rt.Host bits)
+#define CharAvailableFlag BIT_0
+#define CmdAvailFlag BIT_1
+#define CharEchoFlag BIT_2
+#define Command_Executing_eq1_Bit BIT_7
 
-#define PARAM_ERROR            0x02
-#define BAD_VALUE_ERR           PARAM_ERROR
-
-
-#define HOST_RX_BUFF_LEN    256 // IK20241224 was 292   // Host Rx buff length
-#define HOST_XMT_BUFF_LEN   256 // IK20241224 was 250   // Host Tx buff length should be capable to output one terminal line 80 chars
-#define CharAvailableFlag   BIT0
-#define CharEchoFlag        BIT2
-#define CmdAvailFlag        BIT4
-#define CaRet               0x0D
-
-/*
-#define BIT10               BITA
-#define BIT11               BITB
-#define BIT12               BITC
-#define BIT13               BITD
-#define BIT14               BITE
-#define BIT15               BITF
-*/
-
-#define BIT16               (1<<16)
-#define BIT17               (1<<17)
-#define BIT18               (1<<18)
-#define BIT19               (1<<19)
-#define BIT20               (1<<20)
-#define BIT21               (1<<21)
-#define BIT22               (1<<22)
-#define BIT23               (1<<23)
-
-#define BIT24               (1<<24)
-#define BIT25               (1<<25)
-#define BIT26               (1<<26)
-#define BIT27               (1<<27)
-#define BIT28               (1<<28)
-#define BIT29               (1<<29)
-#define BIT30               (1<<30)
-#define BIT31               (1<<31)
-
-// bits in rt.OperStatusWord
-#define Command_Executing_eq1_Bit    BIT24
-#define ButtonTest_eq1_Bit    BIT0
-
-
-// bits in byte directly mapped to Port5 bits
-#define Button1_Bit         BIT0
-#define Button2_Bit         BIT1
-#define Button3_Bit         BIT2
-#define Button4_Bit         BIT3
-#define LED1_Bit         BIT4
-#define LED2_Bit         BIT5
-#define LED3_Bit         BIT6
-#define LED4_Bit         BIT7
-
-
-
-#define PutChar putchar
-
-#define OK                     0x00
-#define NO_ERROR               OK
-#define PARAM_ERROR            0x02  // Bad SI/O parameter value - command or function syntax error
-
-#define SIO_CMD_ERROR          0x01  // Bad SI/O cmd error - unknown or unintelligible command or function
-#define BAD_SIO_CMD_ERR         SIO_CMD_ERROR
-
-typedef int                 BOOL;
-#define cputs    CPUTS
-
-#define Y1_low_point            0   //index 0 of float[] array
-#define X1_low_point            1   //index 1 of float[] array
-#define Y2_high_point           2   //index 2 of float[] array
-#define X2_high_point           3   //index 3 of float[] array
-
-#define SHOW_LONG     0x10
-#define SHOW_Qfloat      0
-
-#define CPUTS PutStr
-//Int16 CPUTS(const char* p);
-#define FL
-#define FLP
-
+// Buffer Sizes
+#define HOST_XMT_BUFF_LEN 256
+#define HOST_RX_BUFF_LEN 256
 // Functions declared elsewhere (LCDProcessing.h)
 void DisplayChannels(void);
 void LCDSetup(void);
@@ -202,7 +115,7 @@ void InvalidateLCDCache(void);
  * @warning  Buffer must be at least 13 bytes long.
  * @see    putfloat
  */
-void ftoa(float x, char* p);
+void ftoa(float x, char *p);
 
 /**
  * @brief  Converts float to a string and sends floating value out.
@@ -212,7 +125,7 @@ void ftoa(float x, char* p);
  * @note    Not currently implemented anywhere in the code.
  * @see    ftoa()
  */
-char* putfloat_n(float x, int n);
+char *putfloat_n(float x, int n);
 
 /**
  * @brief  Print on screen float in format tttttt.dddd.
@@ -235,7 +148,7 @@ char* putfloat_n(float x, int n);
  * @warning TOTAL OUTPUT STRING LENGTH <= 19, Max allowed %9.9f
  * where *f defines passed string "%t.df" or "%t.dF"
  */
-void float_print(const char* f, const float fx);
+void float_print(const char *f, const float fx);
 
 /**
  * @brief  Put floating value out over UART.
@@ -245,7 +158,7 @@ void float_print(const char* f, const float fx);
  * @see    ftoa
  * @see    zerostr
  */
-char* putfloat(float x);
+char *putfloat(float x);
 
 /**
  * @brief Converts an integer to a null-terminated string using a specified base.
@@ -267,7 +180,7 @@ char* putfloat(float x);
  * @see float_print
  * @see putfloat_n
  */
-//void itoa(int num, char* str, int base);
+// void itoa(int num, char* str, int base);
 
 /**
  * @brief Converts a floating-point number to a signed decimal string.
@@ -288,7 +201,7 @@ char* putfloat(float x);
  * @see itoa
  * @see putfloat_n
  */
-void floatToString(float num, char* buffer, int decimalPlaces);
+void floatToString(float num, char *buffer, int decimalPlaces);
 
 /**
  * @brief Converts a string to an integer.
@@ -306,7 +219,7 @@ void floatToString(float num, char* buffer, int decimalPlaces);
  * the maximum value of a signed 16-bit or 32-bit int (depending on your architecture),
  * the result will wrap around.
  */
-int atoi(const char* str);
+int atoi(const char *str);
 
 //---------------------------------------------------------------------------------Command Processing-----------------------------------------------------------------------------------------------------------
 /**
@@ -474,7 +387,7 @@ void adc0_acquire(void);
  * @note    Not yet implemented. Not entirely sure how to implement to UMM from ATMEL.
  * @see    SetGetCalParam
  */
-void SetGet_param(int float_offset, float minValue, float maxValue, float* Qf_var_ptr,  char* verb_msg);
+void SetGet_param(int float_offset, float minValue, float maxValue, float *Qf_var_ptr, char *verb_msg);
 
 /**
  * @brief  set/get will define "Calibration PARameter" or "factor" for a particular cal, command takes 2 arguments.
@@ -538,7 +451,7 @@ void FlipScreen(void);
  * @param comment Pointer to the null-terminated string to be printed.
  * @return void
  */
-void Send_comment(char* comment);
+void Send_comment(char *comment);
 
 /**
  * @brief Sends a comment only if verbose response mode is enabled.
@@ -547,7 +460,7 @@ void Send_comment(char* comment);
  * @param comment Pointer to the null-terminated string to be printed.
  * @return void
  */
-void Send_verbose_comment(char* comment);
+void Send_verbose_comment(char *comment);
 
 /**
  * @brief Decomposes a command code into individual characters and outputs them.
@@ -572,7 +485,7 @@ void Put_CMD_as_chars(void);
  * @warning The internal errorBuf has a fixed size of 256 bytes; ensure combined
  * input lengths do not cause a buffer overflow.
  */
-void Send_RCI_Param_Error(char* valid_msg);
+void Send_RCI_Param_Error(char *valid_msg);
 
 /**
  * @brief Transmits a null-terminated string via UART and returns the character count.
@@ -587,7 +500,7 @@ void Send_RCI_Param_Error(char* valid_msg);
  * @warning This is a blocking call; it will hang if the UART hardware is not
  * properly initialized or if the TX flag never clears.
  */
-uint16 PutStr(char*  Str);
+uint16 PutStr(char *Str);
 
 /**
  * @brief Converts a lowercase character to uppercase.
@@ -611,7 +524,7 @@ int toupper(int ch);
  * @note This function performs an in-place modification; the caller must
  * ensure the input buffer is writable (e.g., not a string literal in read-only memory).
  */
-char * ToUpper(char* in_str);
+char *ToUpper(char *in_str);
 
 /**
  * @brief Validates if a string contains a numeric representation.
@@ -625,7 +538,7 @@ char * ToUpper(char* in_str);
  * @note If the string consists only of a carriage return without any preceding
  * digits, it is considered invalid.
  */
-int Is_Numeric(char* strp);
+int Is_Numeric(char *strp);
 
 /**
  * @brief Converts an uppercase character to lowercase.
@@ -638,7 +551,7 @@ int Is_Numeric(char* strp);
  * @note This implementation leverages a branchless-style comparison by checking
  * if the offset value falls outside the lowercase alphabet range.
  */
-uint32 toLower(Uchar ch);
+uint32_t toLower(Uchar ch);
 
 /**
  * @brief Packs four ASCII characters into a single 32-bit unsigned integer.
@@ -654,7 +567,7 @@ uint32 toLower(Uchar ch);
  * @note This function uses explicit multipliers (256, 65536) to perform
  * bit-shifting logic across the word.
  */
-uint32 Convert_4_ASCII_to_Uint32(Uchar* pstr);
+uint32_t Convert_4_ASCII_to_Uint32(Uchar *pstr);
 
 /**
  * @brief Converts a single ASCII hexadecimal character to its numeric value.
@@ -740,7 +653,7 @@ void ClearRxBuffer(void);
  * user-controlled `Msg` may also pose security risks if format specifiers
  * are present in the input.
  */
-void SendMsgToPC(char FL * Msg);
+void SendMsgToPC(const char *Msg);
 
 /**
  * @brief Main parser for Remote Control Interface (RCI) commands.
@@ -763,191 +676,128 @@ void SendMsgToPC(char FL * Msg);
  */
 Uchar ParseRCI(void);
 
-typedef struct          // this structure must be initialized, DO NOT CHANGE ORDER due to IAR bug, see LinInterpolation()
+typedef struct
 {
-    float low_meas;     // lower 'Y1' coordinate
-    float calptlow;     // current or voltage - lower 'X1' coordinate
-    float high_meas;    // higher 'Y2' coordinate
-    float calpthigh;    // current or voltage - higher 'X2' coordinate
+    float low_meas;
+    float calptlow;
+    float high_meas;
+    float calpthigh;
 } Calibr2points;
 
-typedef struct {
-    char cmd_code[4];       //Uint32 command coding (4 chars)
-    void* f_ptr;            //pointer to a function
+typedef struct
+{
+    char cmd_code[4];    // 4-char command code
+    void (*f_ptr)(void); // Correct C function pointer syntax
 } t_rci_commands;
 
 extern const t_rci_commands rci[];
 
-typedef struct                      // this structure must be initialized, DO NOT CHANGE ORDER due to IAR bug, see LinInterpolation()
+// Structs for Settings and System Data
+typedef struct
 {
-    uint16_t high_bat_threshold;  // in 10th mVolts, 145V saved as 14500
-    uint16_t low_bat_threshold;   // in 10th mVolts, 103V saved as 10300
-    uint16_t minus_gf_threshold;  // in 10th mVolts, 20V saved as 2000
-    uint16_t plus_gf_threshold;   // in 10th mVolts, 13V saved as 1300
-    uint16_t ripple_voltage_threshold;    // in mVolts, 0.625 VAC saved as 625
-    uint16_t ripple_current_threshold;    // in mAperes, 45 mA saved as 45
-    uint16_t time_delay;          // grace periond delay from event is triggered until alarm is set
-    uint16_t meter_address;       // 0x004  2  // battery monitor address
-    uint16_t host_address;        // 0x004  2  // battery monitor address
-    uint16_t baud_rate;           // 0x00C  2  // baud rate, default Baud_19200
-    uint16_t SavedStatusWord;     // non-volatile user-chosen saved states as bits: buzzer on/off, latch on/off, 1 or 3 phase, current output I01 or I420
-    uint8_t  buzzer;              // indicates whether buzzer is on or off
-    uint8_t  phase;               // dealing with ripple created by battery charger type. =1 for single phase charger (120 Hz ripple), =3 for three phase charger (360 Hz ripple)
-    uint8_t  latch_state;         // whether or not latch on some event or when condition clears, restore normal operation
-    uint8_t  pulse;               // IK20250204 SHOULD NOT BE SAVED IN FLASH! It creates pulses in battery charging line //#define Pulse_Test_eq1_Bit            Bit_0    //  =1 test in progress (inject pulses), 0=normal work
-    uint8_t  disabled_alarms;     // the bit == 1 disables a partcular alarm
-    uint8_t  unit_type;           // only valid values 24, 48, 125, 250
-    uint8_t  unit_index;          // used to access array Alarm_Limits
+    uint16_t high_bat_threshold;
+    uint16_t low_bat_threshold;
+    uint16_t minus_gf_threshold;
+    uint16_t plus_gf_threshold;
+    uint16_t ripple_voltage_threshold;
+    uint16_t ripple_current_threshold;
+    uint16_t time_delay;
+    uint16_t meter_address;
+    uint16_t host_address;
+    uint16_t baud_rate;
+    uint16_t SavedStatusWord;
+    uint8_t buzzer;
+    uint8_t phase;
+    uint8_t latch_state;
+    uint8_t pulse;
+    uint8_t disabled_alarms;
+    uint8_t unit_type;
+    uint8_t unit_index;
 } SettingsStruct;
 
-typedef union          // this union is a n alias of structure, allws to acsess Calibr2points members as if they are in array.
+typedef union
 {
     float Coord[4];
     Calibr2points Cal;
-} Calibation, *CalPtr;
+} Calibration;
 
-typedef struct //size of SysData should be less, than 2048 - size of EEPROM block
-{                                   // ?? - NOT USED AND CAN BE REMOVED
-                                    // ++ - NOT USED, BUT SHOULD BE
-                                    // !! - USED, BUT SHOULD NOT BE (do not need, for test)
+typedef struct
+{
+    uint16_t Data_Valid;
+    uint16_t FWversion;
+    uint16_t meter_address;
+    uint16_t host_address;
+    uint16_t dll_timeout;
+    uint16_t xmt_delay;
+    uint16_t baud_rate;
+    uint16_t char_gap;
 
-                            // adr offset size
-    uint16 Data_Valid;          // 0x000  2  // should not be FF
-#define DATA_VALID_OFFSET       0
-    uint16 FWversion;           // 0x002  2  // FW version, 0030
-#define FW_VERSION_OFFSET       2
-    uint16 meter_address;       // 0x004  2  // battery monitor address
-    uint16 host_address;        // 0x006  2  // Modbus first register
-    uint16 dll_timeout;         // 0x008  2  //-!- IK20250203 only set/get not used in code !!  dll timeout
-    uint16 xmt_delay;           // 0x00A  2  // xmt delay
-    uint16 baud_rate;   // 0x00C  2  // baud rate, default Baud_19200
-    uint16 char_gap;            // 0x00E  2  //-!- IK20250203 only set/get not used in code !!  inter-char gap, default = 1041 microseconds
+    uint8_t protocol;
+    uint8_t protocol_parity;
+    uint8_t dll_confirm;
+    uint8_t app_confirm;
+    uint8_t dll_retries;
+    uint8_t extra_bytes[11];
 
-    //--- Modbus Settings start at 0x010
-    uint8 protocol;             // 0x010  1  // protocol byte, enum DNP or MODBUS
-    uint8 protocol_parity;      // 0x011  1  // == 1 protocol_parity even; == 2 protocol_parity odd
-    uint8 dll_confirm;          // 0x012  1  //-!- IK20250203 only set/get not used in code !!  dll confirm status
-    uint8 app_confirm;          // 0x013  1  // Modbus UART_parity
-    uint8 dll_retries;          // 0x014  1  //-!- IK20250203 only set/get not used in code !!  dll retries
-    //see also uint8  dnp_dll_retries; //-!- IK20231214 saved into EEPROM but incorrect logic: not checked in protocol //number of dll retries
-    uint8 extra_bytes[11];      // 0x015  11 // future use
+    uint8_t unit_type;
+    uint8_t input_type[6];
+    uint8_t true_1mA_false_20mA;
+    uint16_t V4;
+    uint16_t V20;
+    uint16_t extra_int16[2];
 
-    //--  ADC-related variables start at 0x020
-    uint8 unit_type;            // 0x020  1  //-!- BatMon_V_range type of unit (hardware - defined): if ((unit_type != 24) && (unit_type != 48) && (unit_type != 125) && (unit_type != 250)) unit_type = 125;
-    uint8 input_type[6];        // 0x021  6  // type of analog input - uni-polar or bi-polar  index [0] is former variable 'analog_points'
-    //uint8 analog_points;        // 0x026  1  // number of active analog input points
-    uint8 true_1mA_false_20mA;  // 0x027  1  // NOT USED
-    uint16 V4;                  // 0x028  2  // 4mA voltage point (V4)
-    uint16 V20;                 // 0x02A  2  // 20 ma voltage point (V20) Low byte
-    uint16 extra_int16[2];      // 0x02C  4  // future use
+    uint8_t FrontBoardBytes[16];
 
-    // LCD board settings start at 0x030
-    uint8 FrontBoardBytes[16];  // 0x030  16  // future use
+    Calibr2points BatteryVolts;
+    Calibr2points FaultVolts;
+    Calibr2points MinusGndVolts;
+    Calibr2points RippleVolts1ph;
+    Calibr2points RippleVolts3ph;
+    Calibr2points RippleCurr1ph;
+    Calibr2points RippleCurr3ph;
+    Calibr2points CurrentOut_I420;
 
-    // Calibration floats start at 0x040
-    Calibr2points BatteryVolts; // 0x040  16 // Y1 X1 Y2 X2 Battery Voltage calibration
-    Calibr2points FaultVolts;       // 0x050  16 // Y1 X1 Y2 X2 Fault Voltage calibration
-    Calibr2points MinusGndVolts;    // 0x060  16 // Y1 X1 Y2 X2 Minus Grnd voltage correction factor info
-    Calibr2points RippleVolts1ph;   // 0x070  16 // Y1 X1 Y2 X2 single phase ripple voltage calibration
-    Calibr2points RippleVolts3ph;   // 0x080  16 // Y1 X1 Y2 X2 three phase ripple voltage calibration
-    Calibr2points RippleCurr1ph;    // 0x090  16 // Y1 X1 Y2 X2 single phase ripple current calibration
-    Calibr2points RippleCurr3ph;    // 0x0A0  16 // Y1 X1 Y2 X2 three phase ripple current calibration
-    Calibr2points CurrentOut_I420;  // 0x0B0  16 // NU X1 NU X2 current loop calibration, value in PWM register to get 4 mA or 20 mA
-/* these vars are included into above structure
-    float v_cal_f;              // 0x0B0  4  // battery offset
-    float cal14_dc4_cal_f;      // 0x0B4  4  // duty cycle for low mA voltage point (DC4)
-    float cal15_dc20_cal_f;     // 0x0B8  4  // duty cycle for high mA voltage point (DC20)
-    float dummy_cal_f;          // 0x0BC  4  // future use
-*/
-#define EXTRA_FLOATS_NUM 8
-    float extra_floats[EXTRA_FLOATS_NUM];   // 0x0C0  4*EXTRA_FLOATS_NUM  // future use
-    //--- if EXTRA_FLOATS_NUM = 8 next address is  0x0E0
-    SettingsStruct   NV_UI;     // Non Volatile User Interface settings controlled by user on Display Board
+    float extra_floats[8];
+    SettingsStruct NV_UI;
 } SYS_SPECIFIC_DATA;
 
-typedef struct { // RealTimeVars
-    /*-OFFSET-*/
-    volatile uint32_t OperStatusWord;       // each bit calls different diagnostic or test, bit definitions in main.h
-    volatile uint16_t free_running_timer;   // used for general purpose timing, increments each interrupt call. overflows and flips over.
-    uint8_t FrontInterfaceByte;              // Lower half byte reflects buttons state: if a button is pressed, the bit is reset to logic 0. Upper half byte controls LEDs states: logic zero lights the LED
-    //uint8_t FrontInterfaceState;             // bits moved into OperStatusWord state contains special cases, for example test mode
-    int16_t  battery_voltage;                    // holds battery voltage in tenths of volts
-    int16_t  fault_voltage;                      // holds fault voltage counts
-    int16_t  minus_gnd_volts;                    // holds minus_gnd_volts
-    int16_t  ripple_current;                     // holds ripple_current in millivolts
-    int16_t  ripple_voltage;                     // holds ripple voltage in millivolts
-    int16_t  plus_gnd_volts;                     // holds calculated plus ground volts
+typedef struct
+{
+    volatile uint32_t OperStatusWord;
+    volatile uint16_t free_running_timer;
+    uint8_t FrontInterfaceByte;
+    int16_t battery_voltage;
+    int16_t fault_voltage;
+    int16_t minus_gnd_volts;
+    int16_t ripple_current;
+    int16_t ripple_voltage;
+    int16_t plus_gnd_volts;
 
-    uint8_t _4ma;     // calibrating 4 mA
-    uint8_t _20ma;    // calibrating 20 mA
-    uint8_t  operating_protocol;
+    uint8_t _4ma;
+    uint8_t _20ma;
+    uint8_t operating_protocol;
+    uint8_t PulseMow;
 
-    uint8_t  PulseMow;        // IK20250204 SHOULD NOT BE SAVED IN FLASH! It creates pulses in battery charging line //#define Pulse_Test_eq1_Bit            Bit_0    //  =1 test in progress (inject pulses), 0=normal work
-
-    //---- Modbus Variables ----
-    uint8_t  registers;              // ModBus: how many bytes are coming: 4*registers
-    uint16_t first_register; // if (operating_protocol == MODBUS) first_register = host_address;      //same location
+    uint8_t registers;
+    uint16_t first_register;
     uint16_t device_register;
 
-    //volatile uint8 Transmitting;  // this flag is set by main level output function like cputs() when buffer gets new string, reset by interrupt when has been transmitted
     volatile uint8_t Host;
-    volatile uint8_t HostTx_StrLen;   // the length of the string written tp the buffer, setting by main level output function like cputs(), reset by interrupt when transmitted
-    volatile uint8_t HostTxPtr_IN;    // index of writing to buffer, increasing by main level output function like cputs(), reset by interrupt when transmitted
-    volatile uint8_t HostTxPtr_OUT;   // index of reading buffer and writing to a serial channel, increasing and reset by a timer interrupt when transmitted
-    volatile uint16_t HostRxBuffPtr;  // pointers == indexes in array should be int, or compiler inserts conversion from/to char
-    volatile uint16_t EchoRxBuffPtr;  //to send echo
-    char   HostTxBuff[HOST_XMT_BUFF_LEN];   // [256] used with UART
-    char   HostRxBuff[HOST_RX_BUFF_LEN];    // [256] used with UART
+    volatile uint8_t HostTx_StrLen;
+    volatile uint8_t HostTxPtr_IN;
+    volatile uint8_t HostTxPtr_OUT;
+    volatile uint16_t HostRxBuffPtr;
+    volatile uint16_t EchoRxBuffPtr;
+    char HostTxBuff[HOST_XMT_BUFF_LEN];
+    char HostRxBuff[HOST_RX_BUFF_LEN];
+} RealTimeVars;
 
-} RealTimeVars;//real time variables in a structure - for asembler access
+// Variable Declarations
 extern RealTimeVars rt;
 extern SYS_SPECIFIC_DATA SysData;
-extern SYS_SPECIFIC_DATA EEPROM_SysData;
-extern SYS_SPECIFIC_DATA DefaultSysdata;
-extern uint32 ErrorStatus ;
+extern uint32_t ErrorStatus;
 
-#endif /* CMDPROCESSINGTEST_H_ */
+// Prototypes
+uint32_t Convert_4_ASCII_to_Uint32(Uchar *pstr);
 
-uint32 Convert_4_ASCII_to_Uint32(Uchar* pstr);
-#define ASCII_TESTING
-extern volatile uint8  operating_protocol;
-enum Protocols
-{
-   SETUP = 0x00,
-   DNP3 =  0x11,
-   MODBUS = 0x22,
-   ASCII_CMDS = 0x33,
-   ASCII_MENU = 0x44
-};
-enum Board_Addresses
-{
-    ALARM_WRITE = 0x10,     //-!- IK20241226 used only in main() to send something
-    ALARM_READ = 0x11,      // Also, Send TWI stuff to keep other boards from timing out and resetting
-    DISPLAY_WRITE = 0x40,   //-!- IK20241226 used only in main() to send something to Display board
-    DISPLAY_READ = 0x41,    //-!- IK20241226 used after Write_TWI(DISPLAY_WRITE,xxxx
-    IO_WRITE = 0x82,
-    IO_READ = 0x83,         // IK20240122 Display board does not communicate with Relay board
-    A_TO_D_WRITE = 0xD0,    // used in Measure() -> Write_TWI(A_TO_D_WRITE, 0x88, NULL_BYTE, NULL_BYTE);     //15sps for 16 bits
-    A_TO_D_READ = 0xD1,     // used in Measure() -> Read_TWI(A_TO_D_READ);
-};
-
-#define CmdVerboseResponse BIT7
-#define TWI_TIMEOUT_ms 200
-#define TWSR_STATUS_MASK 0xF8
-#define TWINT BIT7
-#define TWEA BIT6
-#define TWSTA BIT5
-#define TWSTO BIT4
-#define TWEN BIT2
-#define TWIE BIT0
-extern volatile uint8 debug_timer;
-extern volatile Uchar TWDR;
-#define DISPLAY_WRITE_TWI_ADR DISPLAY_WRITE
-#define IO_WRITE_TWI_ADR IO_WRITE
-#define TWI_MSG_ALARMS 14
-#define TWI_BATT_VOLTS 1
-#define NOT_DONE 0
-#define DONE 10
-
-#define FW_VERSION  30
-#define FW_ver_float ((float)(FW_VERSION) + 0.01f) / 10.0f
+#endif
