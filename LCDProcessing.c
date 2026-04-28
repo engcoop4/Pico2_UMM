@@ -52,6 +52,12 @@ static int lastReturn = 0; // last button state SW3 (RETURN)
 
 extern volatile uint8_t entry_method;
 
+// UI Dispatcher global variables
+int8_t b1_pressed;
+int8_t b2_pressed;
+int8_t enter_pressed;
+int8_t return_pressed;
+
 extern int calidone;
 // X cord can be set to uint8_t because 2^6 is 256, and 240 will never go above this threshold
 uint32_t X_Cord = 0;
@@ -587,367 +593,410 @@ void InitYPositions(void)
 
 void WaitForInput(void)
 {
-    static bool lock_engaged = false; // acts as lock to have 1 button press, tunes out noise/adc readings from falling voltages while the capacitor discharges after a button press
-                                      // Only resets when finger fully removed and adc value falls below 600 threshold (Release Gate)
-
     // manually reset buttons on each new waitforinput because theoretically each new waitforinput should be waiting for an input or processing a single one
-    int8_t b1_pressed = 0, b2_pressed = 0, enter_pressed = 0, return_pressed = 0;
+    b1_pressed = 0;
+    b2_pressed = 0;
+    enter_pressed = 0;
+    return_pressed = 0;
 
-    // CRITICAL: Only read button ADC if touch is DISABLED to avoid concurrent ADC access
-    // When touch is enabled, it has priority over button inputs
+    // if a touch is triggered, set up correct ADC and take measurements of X and Y coordinates
+    // else, check buttons for input
     if (touch_triggered)
     {
-        adc_select_input(0);
+        TouchDetection();
     }
     else if (!touch_triggered)
     {
-        adc_select_input(2);
-        busy_wait_us(10);
-
-        uint16_t adc_val = adc_read(); // take adc value
-
-        // no buttons pressed if falls under 500, "unlocks"
-        if (adc_val < WFI_BUT_THRESH_NP)
-        {
-            lock_engaged = false;
-        }
-
-        // if lock is not engaged and adc value is above 700, we can say "a button is being pressed"
-        if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
-        {
-
-            // wait for SPI noise to pass (even with filters included, SPI communication causes noise spikes)
-            sleep_ms(5);
-
-            // take a confirmation reading to ensure its not just a random spike
-            adc_val = adc_read();
-
-            // button value reads at 4071, use 3725 for expected tolerance across parts, if above this threshold, ENTER is being pressed
-            if (adc_val >= WFI_BUT_ENTER_THRESH_P)
-            {
-                enter_pressed = 1;
-                lock_engaged = true;
-            }
-            // button value reads at 2780, use 2480 (low) and 2980 (high) for expected tolerance across parts, if between this threshold, RETURN is being pressed
-            else if (adc_val >= WFI_BUT_RETURN_THRESH_P_L && adc_val <= WFI_BUT_RETURN_THRESH_P_HI)
-            {
-                return_pressed = 1;
-                lock_engaged = true;
-            }
-            // button value reads at 2048, use 1737 (low) and 2234 (high) for expected tolerance across parts, if between this threshold, DOWN is being pressed
-            else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
-            {
-                b2_pressed = 1;
-                lock_engaged = true;
-            }
-            // button value reads at 1365, use 992 (low) and 1489 (high) for expected tolerance across parts, if between this threshold, UP is being pressed
-            else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
-            {
-                b1_pressed = 1;
-                lock_engaged = true;
-            }
-        }
+        ButtonPolling();
     }
 
+    // change screen and process inputs in UIDispatcher
+    UIDispatcher();
+
+    // most likely will be phased out, used primarily for testing calibration accuracy
+    CursorFunction();
+}
+
+// handles button polling of WaitForInput (allows for removal of button logic in main WaitForInput)
+void ButtonPolling(void)
+{
+    static bool lock_engaged = false;
+    adc_select_input(2);
+    busy_wait_us(10);
+
+    uint16_t adc_val = adc_read(); // take adc value
+
+    // no buttons pressed if falls under 500, "unlocks"
+    if (adc_val < WFI_BUT_THRESH_NP)
+    {
+        lock_engaged = false;
+    }
+
+    // if lock is not engaged and adc value is above 700, we can say "a button is being pressed"
+    if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
+    {
+
+        // wait for SPI noise to pass (even with filters included, SPI communication causes noise spikes)
+        sleep_ms(5);
+
+        // take a confirmation reading to ensure its not just a random spike
+        adc_val = adc_read();
+
+        // button value reads at 4071, use 3725 for expected tolerance across parts, if above this threshold, ENTER is being pressed
+        if (adc_val >= WFI_BUT_ENTER_THRESH_P)
+        {
+            enter_pressed = 1;
+            lock_engaged = true;
+        }
+        // button value reads at 2780, use 2480 (low) and 2980 (high) for expected tolerance across parts, if between this threshold, RETURN is being pressed
+        else if (adc_val >= WFI_BUT_RETURN_THRESH_P_L && adc_val <= WFI_BUT_RETURN_THRESH_P_HI)
+        {
+            return_pressed = 1;
+            lock_engaged = true;
+        }
+        // button value reads at 2048, use 1737 (low) and 2234 (high) for expected tolerance across parts, if between this threshold, DOWN is being pressed
+        else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
+        {
+            b2_pressed = 1;
+            lock_engaged = true;
+        }
+        // button value reads at 1365, use 992 (low) and 1489 (high) for expected tolerance across parts, if between this threshold, UP is being pressed
+        else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
+        {
+            b1_pressed = 1;
+            lock_engaged = true;
+        }
+    }
+}
+
+// handles touch detection of WaitForInput (allows for removal of coordinate detection/acquisition in main WaitForInput)
+// need to modify to take readings for touch here when CursorFunction is phased out (NOT completed function)
+void TouchDetection(void)
+{
+    adc_select_input(0);
+}
+
+// handles screen changes and LCD (easiest to begin implementation for?)
+// possible to break this down into even smaller functions, but may be overkill to do all of that
+void UIDispatcher(void)
+{
     switch (current_screen)
     {
-    // Displays LEDs, sets current_screen to next_screen Screen_TouchDecision, resets force_redraw so mainloop switch case works correctly
+    // controls display, only input option is ENTER to progress (possibly removed/replaced with other screens like cmd explanation screen ?)
     case Screen_ControlsDisplay:
-        if (enter_pressed)
-        {
-            current_screen = Screen_TouchDecision;
-            force_redraw = true;
-        }
+        MENU_ControlsDisplay();
         break;
 
-    // Once screen changed to Screen_TouchDecision, enter UpdateTouchHighlight when a button is pressed (UP/DOWN), or go to next screen (ENTER)
+    // menu screen for enable/disable touch
     case Screen_TouchDecision:
-        if (b1_pressed)
-        {
-            cursor_position = 0;
-            UpdateTouchHighlight();
-        }
-        else if (b2_pressed)
-        {
-            cursor_position = 1;
-            UpdateTouchHighlight();
-        }
-
-        if (enter_pressed)
-        {
-            if (!cursor_position)
-            {
-                cali = 0;
-                touch_triggered = 0;
-
-                // in case of Disable -> Return -> Enable
-                // P1IE &= ~BIT0;        // Disable interrupt
-                // P1IFG &= ~BIT0;       // Clear any "stale" flag from the 'Disabled' period
-
-                current_screen = Screen_TouchCalibration;
-                TouchScreeninit(); // Re-init pins and re-enable P1IE
-            }
-            else
-            {
-                current_screen = Screen_OperatingMode;
-                // should be disabling touch screen initialization
-                TouchScreen_deinit();
-            }
-            cursor_position = 0;
-            force_redraw = true;
-        }
+        MENU_TouchDecision();
         break;
 
     // needs to respond to touch ONLY, no button presses for calibration
     // code at bottom will scan for X and Y coordinate values
     // kills interrupt - how does this work with how the R-Pi handles interrupts ?
     case Screen_TouchCalibration:
-
-        if (touch_triggered)
-        {
-            // 1. GATEKEEPER: Is the user touching the right general area?
-            if (CaliBoundsCheckTouch())
-            {
-
-                if (cali == 0)
-                {
-                    CaptureCaliCoordsTouch();
-
-                    // update cali value AFTER min values captured, update screen to indicate to user to remove finger
-                    UpdateTouchCalibration();
-
-                    // 4. WAIT: Don't move on until the finger is gone
-                    WaitForTouchRelease();
-                    touch_triggered = 0;
-
-                    // 5. RE-ARM: Clean up flags and re-enable interrupt
-                    // P1IFG &= ~BIT0;
-                    // P1IE |= BIT0;
-                }
-                else if (cali == 1)
-                {
-                    // Repeat for the second point
-                    CaptureCaliCoordsTouch();
-
-                    WaitForTouchRelease();
-                    FinishTouchCalibration();
-                    current_screen = Screen_OperatingMode;
-
-                    // P1IFG &= ~BIT0;
-                    touch_triggered = 0;
-                    // P1IE |= BIT0;
-
-                    force_redraw = true;
-                }
-            }
-            else
-            {
-                // FAILED BOUNDS: User touched the wrong spot.
-                // We must still reset the flag/interrupt so they can try again.
-                WaitForTouchRelease();
-                // P1IFG &= ~BIT0;
-                touch_triggered = 0;
-                // P1IE |= BIT0;
-            }
-        }
+        MENU_TouchCalibration();
 
         break;
     // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
     // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
     case Screen_OperatingMode:
-    {
-
-        // 1. TOUCH INPUT LOGIC
-        if (touch_triggered)
-        {
-            // Clear the ISR flag immediately so we don't loop on the same touch
-            touch_triggered = 0;
-
-            // Read fresh coordinates (this includes the settling delay internally)
-            X_Cord = ReadTouchX();
-            Y_Cord = ReadTouchY();
-
-            // switch from coordinate reading to button inputs
-            TouchToButtons();
-
-            // Only process if the touch is valid (greater than 0)
-            if (X_Cord > 0 && Y_Cord > 0)
-            {
-                int i;
-                for (i = 0; i < 5; i++)
-                {
-                    // Logic: Start at 60Y, each box is 48px high, stepping by 52px
-                    uint16_t row_top = 60 + (52 * i);
-
-                    if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48))
-                    {
-                        cursor_position = i;
-                        UpdateOperatingModeSelection();
-
-                        // Trigger the transition immediately
-                        enter_pressed = 1;
-                        break;
-                    }
-                }
-            }
-
-            // Re-enable interrupt for next touch event
-            gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
-        }
-
-        // 2. PHYSICAL BUTTON LOGIC
-        // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
-        int8_t moved = b2_pressed - b1_pressed;
-        if (moved != 0)
-        {
-            cursor_position += moved;
-
-            // Clamp bounds to the 5 available menu items (0 to 4)
-            if (cursor_position < 0)
-                cursor_position = 4;
-            if (cursor_position > 4)
-                cursor_position = 0;
-
-            UpdateOperatingModeSelection();
-        }
-
-        // 3. STATE TRANSITION LOGIC
-        if (enter_pressed)
-        {
-            // CRITICAL: Clear the flag so the next screen doesn't "auto-enter"
-            enter_pressed = 0;
-
-            if (cursor_position < 4)
-            {
-                // Path A: One of the 4 Presets was selected
-                entry_method = ENTRY_PRESET;
-                PresetConfigs(); // This function must set current_screen = InitializationDone
-                current_screen = Screen_DisplayChannels;
-                force_redraw = true;
-            }
-            else
-            {
-                // Path B: "Custom" (Item 5) was selected
-                entry_method = ENTRY_CUSTOM;
-                numberdisplays = 1;
-                current_screen = Screen_NumberDisplays;
-                cursor_position = 0;
-                force_redraw = true;
-            }
-        }
-        else if (return_pressed)
-        {
-            // Clear the flag to prevent "Double Returns"
-            return_pressed = 0;
-
-            current_screen = Screen_TouchDecision;
-            cali = 0;
-            cursor_position = 0;
-            force_redraw = true;
-        }
+        MENU_OperatingMode();
         break;
-    }
 
     // Increment number of displays if SW1 pressed, decrement if SW2 pressed
     case Screen_NumberDisplays:
-    {
-        bool value_changed = false;
-        if (b1_pressed)
-        {
-            numberdisplays++;
-            value_changed = true;
-        }
-        if (b2_pressed)
-        {
-            numberdisplays--;
-            value_changed = true;
-        }
-
-        if (value_changed)
-        {
-            numberdisplays = (numberdisplays > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberdisplays < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberdisplays);
-            UpdateNumberOfDisplays();
-        }
-
-        if (enter_pressed)
-        {
-            j_idx = 1;          // Start at Display A
-            numberchannels = 1; // Start at channel 1
-            current_screen = Screen_ChannelSelection;
-            force_redraw = true;
-        }
-        else if (return_pressed)
-        {
-            current_screen = Screen_OperatingMode;
-            force_redraw = true;
-        }
+        MENU_NumberDisplays();
         break;
-    }
 
     // Increment channel selection if SW1 pressed, decrement if SW2 pressed
     case Screen_ChannelSelection:
-    {
-        bool value_changed = false;
-        if (b1_pressed)
-        {
-            numberchannels++;
-            value_changed = true;
-        }
-        if (b2_pressed)
-        {
-            numberchannels--;
-            value_changed = true;
-        }
-
-        if (value_changed)
-        {
-            numberchannels = (numberchannels > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberchannels < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberchannels);
-            UpdateChannelSelection();
-        }
-
-        // if enter pressed, increment j_idx to go to next display
-        if (enter_pressed)
-        {
-            if (j_idx < numberdisplays)
-            {
-                j_idx++;
-                numberchannels = 1;
-                UpdateChannelSelection();
-            }
-            else
-            {
-                current_screen = Screen_DisplayChannels;
-                force_redraw = true;
-            }
-        }
-        else if (return_pressed)
-        {
-            if (j_idx > 1)
-            {
-                j_idx--;
-                numberchannels = 1;
-
-                // wrap in conditional statement to prevent random black box being drawn for j_idx = 6 (out of array bounds)
-                if (idx < WFI_IDX_THRESH)
-                {
-                    Rectf(FindCenterX(xcord[idx], WFI_CHANSEL_ERASER_X_W, "0", FONT_1),
-                          FindCenterY(ycord[idx] - (touch_init * WFI_CHANSEL_ERASER_Y_F), WFI_CHANSEL_ERASER_START_H - (touch_init * WFI_CHANSEL_ERASER_Y_H_F), "0", FONT_1),
-                          WFI_CHANSEL_ERASER_W, WFI_CHANSEL_ERASER_H, BLACK);
-                }
-
-                UpdateChannelSelection();
-            }
-            else
-            {
-                current_screen = Screen_NumberDisplays;
-                force_redraw = true;
-            }
-        }
+        MENU_ChannelSel();
         break;
     }
+}
+
+void MENU_ControlsDisplay(void)
+{
+    if (enter_pressed)
+    {
+        current_screen = Screen_TouchDecision;
+        force_redraw = true;
+    }
+}
+
+void MENU_TouchDecision(void)
+{
+    if (b1_pressed)
+    {
+        cursor_position = 0;
+    }
+    else if (b2_pressed)
+    {
+        cursor_position = 1;
+    }
+    UpdateTouchHighlight();
+
+    if (enter_pressed)
+    {
+        if (!cursor_position)
+        {
+            cali = 0;
+            touch_triggered = 0;
+
+            current_screen = Screen_TouchCalibration;
+            TouchScreeninit(); // re-init pins and enable interrupts
+        }
+        else
+        {
+            current_screen = Screen_OperatingMode;
+            // should be disabling touch screen initialization
+            TouchScreen_deinit();
+        }
+        cursor_position = 0;
+        force_redraw = true;
+    }
+}
+
+void MENU_TouchCalibration(void)
+{
+    if (touch_triggered)
+    {
+        // 1. GATEKEEPER: Is the user touching the right general area?
+        if (CaliBoundsCheckTouch())
+        {
+
+            if (cali == 0)
+            {
+                CaptureCaliCoordsTouch();
+
+                // update cali value AFTER min values captured, update screen to indicate to user to remove finger
+                UpdateTouchCalibration();
+
+                // 4. WAIT: Don't move on until the finger is gone
+                WaitForTouchRelease();
+                touch_triggered = 0;
+
+                // 5. RE-ARM: Clean up flags and re-enable interrupt
+                // P1IFG &= ~BIT0;
+                // P1IE |= BIT0;
+            }
+            else if (cali == 1)
+            {
+                // Repeat for the second point
+                CaptureCaliCoordsTouch();
+
+                WaitForTouchRelease();
+                FinishTouchCalibration();
+                current_screen = Screen_OperatingMode;
+
+                // P1IFG &= ~BIT0;
+                touch_triggered = 0;
+                // P1IE |= BIT0;
+
+                force_redraw = true;
+            }
+        }
+        else
+        {
+            // FAILED BOUNDS: User touched the wrong spot.
+            // We must still reset the flag/interrupt so they can try again.
+            WaitForTouchRelease();
+            // P1IFG &= ~BIT0;
+            touch_triggered = 0;
+            // P1IE |= BIT0;
+        }
+    }
+}
+
+void MENU_OperatingMode(void)
+{
+    if (touch_triggered)
+    {
+        // Clear the ISR flag immediately so we don't loop on the same touch
+        touch_triggered = 0;
+
+        // Read fresh coordinates (this includes the settling delay internally)
+        X_Cord = ReadTouchX();
+        Y_Cord = ReadTouchY();
+
+        // switch from coordinate reading to button inputs
+        TouchToButtons();
+
+        // Only process if the touch is valid (greater than 0)
+        if (X_Cord > 0 && Y_Cord > 0)
+        {
+            int i;
+            for (i = 0; i < 5; i++)
+            {
+                // Logic: Start at 60Y, each box is 48px high, stepping by 52px
+                uint16_t row_top = 60 + (52 * i);
+
+                if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48))
+                {
+                    cursor_position = i;
+                    UpdateOperatingModeSelection();
+
+                    // Trigger the transition immediately
+                    enter_pressed = 1;
+                    break;
+                }
+            }
+        }
+
+        // Re-enable interrupt for next touch event
+        gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
     }
 
-    // LEDs and cursor used for tracking touch, not included in final implementation
+    // 2. PHYSICAL BUTTON LOGIC
+    // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
+    int8_t moved = b2_pressed - b1_pressed;
+    if (moved != 0)
+    {
+        cursor_position += moved;
+
+        // Clamp bounds to the 5 available menu items (0 to 4)
+        if (cursor_position < 0)
+            cursor_position = 4;
+        if (cursor_position > 4)
+            cursor_position = 0;
+
+        UpdateOperatingModeSelection();
+    }
+
+    // 3. STATE TRANSITION LOGIC
+    if (enter_pressed)
+    {
+        // CRITICAL: Clear the flag so the next screen doesn't "auto-enter"
+        enter_pressed = 0;
+
+        if (cursor_position < 4)
+        {
+            // Path A: One of the 4 Presets was selected
+            entry_method = ENTRY_PRESET;
+            PresetConfigs(); // This function must set current_screen = InitializationDone
+            current_screen = Screen_DisplayChannels;
+            force_redraw = true;
+        }
+        else
+        {
+            // Path B: "Custom" (Item 5) was selected
+            entry_method = ENTRY_CUSTOM;
+            numberdisplays = 1;
+            current_screen = Screen_NumberDisplays;
+            cursor_position = 0;
+            force_redraw = true;
+        }
+    }
+    else if (return_pressed)
+    {
+        // Clear the flag to prevent "Double Returns"
+        return_pressed = 0;
+
+        current_screen = Screen_TouchDecision;
+        cali = 0;
+        cursor_position = 0;
+        force_redraw = true;
+    }
+}
+
+void MENU_NumberDisplays(void)
+{
+    bool value_changed = false;
+    if (b1_pressed)
+    {
+        numberdisplays++;
+        value_changed = true;
+    }
+    if (b2_pressed)
+    {
+        numberdisplays--;
+        value_changed = true;
+    }
+
+    if (value_changed)
+    {
+        numberdisplays = (numberdisplays > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberdisplays < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberdisplays);
+        UpdateNumberOfDisplays();
+    }
+
+    if (enter_pressed)
+    {
+        j_idx = 1;          // Start at Display A
+        numberchannels = 1; // Start at channel 1
+        current_screen = Screen_ChannelSelection;
+        force_redraw = true;
+    }
+    else if (return_pressed)
+    {
+        current_screen = Screen_OperatingMode;
+        force_redraw = true;
+    }
+}
+
+void MENU_ChannelSel(void)
+{
+    bool value_changed = false;
+    if (b1_pressed)
+    {
+        numberchannels++;
+        value_changed = true;
+    }
+    if (b2_pressed)
+    {
+        numberchannels--;
+        value_changed = true;
+    }
+
+    if (value_changed)
+    {
+        numberchannels = (numberchannels > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberchannels < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberchannels);
+        UpdateChannelSelection();
+    }
+
+    // if enter pressed, increment j_idx to go to next display
+    if (enter_pressed)
+    {
+        if (j_idx < numberdisplays)
+        {
+            j_idx++;
+            numberchannels = 1;
+            UpdateChannelSelection();
+        }
+        else
+        {
+            current_screen = Screen_DisplayChannels;
+            force_redraw = true;
+        }
+    }
+    else if (return_pressed)
+    {
+        if (j_idx > 1)
+        {
+            j_idx--;
+            numberchannels = 1;
+
+            // wrap in conditional statement to prevent random black box being drawn for j_idx = 6 (out of array bounds)
+            if (idx < WFI_IDX_THRESH)
+            {
+                Rectf(FindCenterX(xcord[idx], WFI_CHANSEL_ERASER_X_W, "0", FONT_1),
+                      FindCenterY(ycord[idx] - (touch_init * WFI_CHANSEL_ERASER_Y_F), WFI_CHANSEL_ERASER_START_H - (touch_init * WFI_CHANSEL_ERASER_Y_H_F), "0", FONT_1),
+                      WFI_CHANSEL_ERASER_W, WFI_CHANSEL_ERASER_H, BLACK);
+            }
+
+            UpdateChannelSelection();
+        }
+        else
+        {
+            current_screen = Screen_NumberDisplays;
+            force_redraw = true;
+        }
+    }
+}
+
+void CursorFunction(void)
+{
     if (current_screen != Screen_TouchCalibration)
     {
         if (touch_init && touch_triggered)
@@ -1023,7 +1072,7 @@ void WaitForInput(void)
                 touch_triggered = 0;
 
                 adc_select_input(2);
-                
+
                 gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
                 gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
             }

@@ -316,5 +316,15 @@ void PresetConfigs(void);
 void DisplayChannels(void);
 void InitYPositions(void);
 void WaitForInput(void);
+void ButtonPolling(void);
+void TouchDetection(void);
+void UIDispatcher(void);
+void MENU_ControlsDisplay(void);
+void MENU_TouchDecision(void);
+void MENU_TouchCalibration(void);
+void MENU_OperatingMode(void);
+void MENU_NumberDisplays(void);
+void MENU_ChannelSel(void);
+void CursorFunction(void);
 
 #endif /* LCDPROCESSING_H_ */
