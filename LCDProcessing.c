@@ -126,8 +126,7 @@ const WFI_ScreenFunction Screen_Changes[9] = {
     ChannelSel,
     NULL,
     NULL,
-    NULL
-};
+    NULL};
 
 //------------------------------------------------------------------------------------------LCD GRAPHIC DISPLAY-----------------------------------------------------------------------------------------------------------
 void LCDSetup(void)
@@ -257,8 +256,6 @@ void UpdateTouchCalibration(void)
     // second calibration circle
     Circlef(CALI_CIRCLE_TWO_X, CALI_CIRCLE_TWO_Y, CALI_CIRCLE_TWO_R, RED);
     Circle(CALI_CIRCLE_TWO_X, CALI_CIRCLE_TWO_Y, CALI_CIRCLE_TWO_R, WHITE);
-
-    // TouchScreenReset();
 }
 
 void FinishTouchCalibration(void)
@@ -692,7 +689,8 @@ void TouchDetection(void)
 // possible to break this down into even smaller functions, but may be overkill to do all of that
 void UIDispatcher(void)
 {
-    if(current_screen < WFI_SCREENS && Screen_Changes[current_screen] != NULL) {
+    if (current_screen < WFI_SCREENS && Screen_Changes[current_screen] != NULL)
+    {
         Screen_Changes[current_screen]();
     }
 }
@@ -708,14 +706,7 @@ void ControlsDisplay(void)
 
 void TouchDecision(void)
 {
-    if (b1_pressed)
-    {
-        cursor_position = 0;
-    }
-    else if (b2_pressed)
-    {
-        cursor_position = 1;
-    }
+    cursor_position = b2_pressed ? 1 : (b1_pressed ? 0 : cursor_position);
     UpdateTouchHighlight();
 
     if (enter_pressed)
@@ -743,49 +734,38 @@ void TouchCalibration(void)
 {
     if (touch_triggered)
     {
-        // 1. GATEKEEPER: Is the user touching the right general area?
+        // gatekeeper : is the user pressing in the general correct error (helps prevent bad calibration, unrefined for each screen though, hence the calibration being required)
         if (CaliBoundsCheckTouch())
         {
-
-            if (cali == 0)
+            if (!cali)
             {
                 CaptureCaliCoordsTouch();
 
-                // update cali value AFTER min values captured, update screen to indicate to user to remove finger
+                // update cali value/screen AFTER min values captured
                 UpdateTouchCalibration();
 
-                // 4. WAIT: Don't move on until the finger is gone
+                // wait for finger to be removed
                 WaitForTouchRelease();
                 touch_triggered = 0;
-
-                // 5. RE-ARM: Clean up flags and re-enable interrupt
-                // P1IFG &= ~BIT0;
-                // P1IE |= BIT0;
             }
-            else if (cali == 1)
+            else if (cali)
             {
-                // Repeat for the second point
+                // capture max values
                 CaptureCaliCoordsTouch();
 
                 WaitForTouchRelease();
                 FinishTouchCalibration();
+
                 current_screen = Screen_OperatingMode;
-
-                // P1IFG &= ~BIT0;
                 touch_triggered = 0;
-                // P1IE |= BIT0;
-
                 force_redraw = true;
             }
         }
         else
         {
-            // FAILED BOUNDS: User touched the wrong spot.
-            // We must still reset the flag/interrupt so they can try again.
+            // user pressing in wrong spot, do nothing except wait for finger release and reset software trigger
             WaitForTouchRelease();
-            // P1IFG &= ~BIT0;
             touch_triggered = 0;
-            // P1IE |= BIT0;
         }
     }
 }
@@ -804,11 +784,10 @@ void OperatingMode(void)
         // switch from coordinate reading to button inputs
         TouchToButtons();
 
-        // Only process if the touch is valid (greater than 0)
+        // Only process if the touch is valid (greater than 0) - the interrupt sets coord values to -1, so this wont execute if the readings dont process correctly
         if (X_Cord > 0 && Y_Cord > 0)
         {
-            int i;
-            for (i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++)
             {
                 // Logic: Start at 60Y, each box is 48px high, stepping by 52px
                 uint16_t row_top = 60 + (52 * i);
@@ -818,7 +797,7 @@ void OperatingMode(void)
                     cursor_position = i;
                     UpdateOperatingModeSelection();
 
-                    // Trigger the transition immediately
+                    // immediately trigger transition after highlighting box selection
                     enter_pressed = 1;
                     break;
                 }
@@ -829,14 +808,14 @@ void OperatingMode(void)
         gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
     }
 
-    // 2. PHYSICAL BUTTON LOGIC
-    // Calculates direction: b2 (Down) is +1, b1 (Up) is -1
+    // button logic
+    // direction: b2 (DOWN) is +1, b1 (UP) is -1
     int8_t moved = b2_pressed - b1_pressed;
     if (moved != 0)
     {
         cursor_position += moved;
 
-        // Clamp bounds to the 5 available menu items (0 to 4)
+        // around-the-world selection
         if (cursor_position < 0)
             cursor_position = 4;
         if (cursor_position > 4)
@@ -845,23 +824,23 @@ void OperatingMode(void)
         UpdateOperatingModeSelection();
     }
 
-    // 3. STATE TRANSITION LOGIC
+    // screen progression logic
     if (enter_pressed)
     {
-        // CRITICAL: Clear the flag so the next screen doesn't "auto-enter"
+        // clear flag
         enter_pressed = 0;
 
         if (cursor_position < 4)
         {
-            // Path A: One of the 4 Presets was selected
+            // preset selected
             entry_method = ENTRY_PRESET;
-            PresetConfigs(); // This function must set current_screen = InitializationDone
+            PresetConfigs();
             current_screen = Screen_DisplayChannels;
             force_redraw = true;
         }
         else
         {
-            // Path B: "Custom" (Item 5) was selected
+            // CUSTOM selected
             entry_method = ENTRY_CUSTOM;
             numberdisplays = 1;
             current_screen = Screen_NumberDisplays;
@@ -871,7 +850,7 @@ void OperatingMode(void)
     }
     else if (return_pressed)
     {
-        // Clear the flag to prevent "Double Returns"
+        // clear flag
         return_pressed = 0;
 
         current_screen = Screen_TouchDecision;
@@ -884,14 +863,11 @@ void OperatingMode(void)
 void NumberDisplays(void)
 {
     bool value_changed = false;
-    if (b1_pressed)
+    int8_t change = b1_pressed - b2_pressed;
+
+    if (change != 0)
     {
-        numberdisplays++;
-        value_changed = true;
-    }
-    if (b2_pressed)
-    {
-        numberdisplays--;
+        numberdisplays += change;
         value_changed = true;
     }
 
@@ -903,8 +879,8 @@ void NumberDisplays(void)
 
     if (enter_pressed)
     {
-        j_idx = 1;          // Start at Display A
-        numberchannels = 1; // Start at channel 1
+        j_idx = 1;          // start at Display A
+        numberchannels = 1; // start at channel 1
         current_screen = Screen_ChannelSelection;
         force_redraw = true;
     }

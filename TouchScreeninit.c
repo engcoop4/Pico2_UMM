@@ -63,8 +63,6 @@ void TouchScreeninit(void)
 
 void TouchScreen_deinit(void)
 {
-    // keep ADC running for buttons; only disable touch-specific GPIO state
-
     // clear software flags
     touch_init = 0;
     screenTouched = 0;

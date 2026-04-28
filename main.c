@@ -69,10 +69,8 @@ int main()
     LCDSetup();
 
     /* ----- MAIN LOOP ----- */
-
     while (1)
     {
-
         // runs until current_screen == InitializationDone (changes in DisplayChannels)
         while (current_screen != InitializationDone)
         {
@@ -88,7 +86,7 @@ int main()
                 }
                 force_redraw = false;
             }
-            WaitForInput(); // Now detects the Soft Return flag
+            WaitForInput();
         }
     }
 }

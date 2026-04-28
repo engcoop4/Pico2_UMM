@@ -65,7 +65,7 @@ extern int8_t unit_index;
 
 typedef enum
 {
-    One_Phase_AC,   // 0
+    One_Phase_AC = 0,   // 0
     Three_Phase_AC, // 1
     Wattmeter,      // 2
     FreqMeter       // 3
