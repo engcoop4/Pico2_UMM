@@ -73,22 +73,22 @@ int main()
                 switch (current_screen)
                 {
                 case Screen_ControlsDisplay:
-                    ControlsDisplay();
+                    MENU_ControlsDisplay();
                     break;
                 case Screen_TouchDecision:
-                    TouchScreenDecision();
+                    MENU_TouchScreenDecision();
                     break;
                 case Screen_TouchCalibration:
-                    TouchCalibration();
+                    MENU_TouchCalibration();
                     break;
                 case Screen_OperatingMode:
-                    OperatingMode();
+                    MENU_OperatingMode();
                     break;
                 case Screen_NumberDisplays:
-                    NumberOfDisplays();
+                    MENU_NumberOfDisplays();
                     break;
                 case Screen_ChannelSelection:
-                    ChannelSelection();
+                    MENU_ChannelSelection();
                     break;
                 case Index_PresetConfigs:
                     PresetConfigs();

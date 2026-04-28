@@ -148,7 +148,7 @@ void ButtonLayout(void)
     return;
 }
 
-void ControlsDisplay(void)
+void MENU_ControlsDisplay(void)
 {
 
     LCD_Clear(BLACK);
@@ -175,7 +175,7 @@ void ControlsDisplay(void)
 
 // Remain on touchscreen decision until ENABLE or DISABLE chosen. Hitting buttons will highlight boxes to indicate selection
 // (not yet implemented aside from graphically - touch screen must be set-up)
-void TouchScreenDecision(void)
+void MENU_TouchScreenDecision(void)
 {
     LCD_Clear(BLACK);
 
@@ -222,7 +222,7 @@ void UpdateTouchHighlight(void)
 }
 
 // screen for user to set-up touch calibration
-void TouchCalibration(void)
+void MENU_TouchCalibration(void)
 {
     LCD_Clear(BLACK);
     cali = 0;
@@ -261,7 +261,7 @@ void FinishTouchCalibration(void)
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
-void OperatingMode(void)
+void MENU_OperatingMode(void)
 {
     uint8_t i;
 
@@ -307,7 +307,7 @@ void UpdateOperatingModeSelection(void)
 
 // Shows number of displays and implements UP as a +1 and DOWN as a -1. Minimum is 1, maximum is 7
 // Holding SW1 for 3 seconds maxs to 7, holding SW2 for 3 seconds decrements to 1 immediately (not implemented yet)
-void NumberOfDisplays(void)
+void MENU_NumberOfDisplays(void)
 {
     LCD_Clear(BLACK);
 
@@ -370,7 +370,7 @@ void UpdateNumberOfDisplays(void)
 }
 
 // modify to have condensed screen if touch_init initialized (use touch_init * [factor]) to adjust bounds ?, 0 means no bounds adjustment, 1 means bounds adjustment)
-void ChannelSelection(void)
+void MENU_ChannelSelection(void)
 {
     LCD_Clear(BLACK);
 
@@ -684,40 +684,40 @@ void UIDispatcher(void)
     {
     // controls display, only input option is ENTER to progress (possibly removed/replaced with other screens like cmd explanation screen ?)
     case Screen_ControlsDisplay:
-        MENU_ControlsDisplay();
+        ControlsDisplay();
         break;
 
     // menu screen for enable/disable touch
     case Screen_TouchDecision:
-        MENU_TouchDecision();
+        TouchDecision();
         break;
 
     // needs to respond to touch ONLY, no button presses for calibration
     // code at bottom will scan for X and Y coordinate values
     // kills interrupt - how does this work with how the R-Pi handles interrupts ?
     case Screen_TouchCalibration:
-        MENU_TouchCalibration();
+        TouchCalibration();
 
         break;
     // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
     // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
     case Screen_OperatingMode:
-        MENU_OperatingMode();
+        OperatingMode();
         break;
 
     // Increment number of displays if SW1 pressed, decrement if SW2 pressed
     case Screen_NumberDisplays:
-        MENU_NumberDisplays();
+        NumberDisplays();
         break;
 
     // Increment channel selection if SW1 pressed, decrement if SW2 pressed
     case Screen_ChannelSelection:
-        MENU_ChannelSel();
+        ChannelSel();
         break;
     }
 }
 
-void MENU_ControlsDisplay(void)
+void ControlsDisplay(void)
 {
     if (enter_pressed)
     {
@@ -726,7 +726,7 @@ void MENU_ControlsDisplay(void)
     }
 }
 
-void MENU_TouchDecision(void)
+void TouchDecision(void)
 {
     if (b1_pressed)
     {
@@ -759,7 +759,7 @@ void MENU_TouchDecision(void)
     }
 }
 
-void MENU_TouchCalibration(void)
+void TouchCalibration(void)
 {
     if (touch_triggered)
     {
@@ -810,7 +810,7 @@ void MENU_TouchCalibration(void)
     }
 }
 
-void MENU_OperatingMode(void)
+void OperatingMode(void)
 {
     if (touch_triggered)
     {
@@ -901,7 +901,7 @@ void MENU_OperatingMode(void)
     }
 }
 
-void MENU_NumberDisplays(void)
+void NumberDisplays(void)
 {
     bool value_changed = false;
     if (b1_pressed)
@@ -935,7 +935,7 @@ void MENU_NumberDisplays(void)
     }
 }
 
-void MENU_ChannelSel(void)
+void ChannelSel(void)
 {
     bool value_changed = false;
     if (b1_pressed)
