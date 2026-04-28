@@ -34,6 +34,18 @@ volatile uint8_t uart_command_received = 0;
 volatile uint8_t return_request_flag = 0;
 volatile uint8_t entry_method = 0;
 
+const ScreenFunction Screen_Options[9] = {
+    MENU_ControlsDisplay,
+    MENU_TouchScreenDecision,
+    MENU_TouchCalibration,
+    MENU_OperatingMode,
+    MENU_NumberOfDisplays,
+    MENU_ChannelSelection,
+    PresetConfigs,
+    DisplayChannels,
+    NULL // safety precaution for 'InitializationDone'
+};
+
 char const *display_unit[6] = {
     "VAC",
     "VDC",
@@ -70,38 +82,13 @@ int main()
             */
             if (force_redraw)
             {
-                switch (current_screen)
+                if (current_screen < 9 && Screen_Options[current_screen] != NULL)
                 {
-                case Screen_ControlsDisplay:
-                    MENU_ControlsDisplay();
-                    break;
-                case Screen_TouchDecision:
-                    MENU_TouchScreenDecision();
-                    break;
-                case Screen_TouchCalibration:
-                    MENU_TouchCalibration();
-                    break;
-                case Screen_OperatingMode:
-                    MENU_OperatingMode();
-                    break;
-                case Screen_NumberDisplays:
-                    MENU_NumberOfDisplays();
-                    break;
-                case Screen_ChannelSelection:
-                    MENU_ChannelSelection();
-                    break;
-                case Index_PresetConfigs:
-                    PresetConfigs();
-                    break;
-                case Screen_DisplayChannels:
-                    DisplayChannels();
-                    break;
+                    Screen_Options[current_screen]();
                 }
                 force_redraw = false;
             }
             WaitForInput(); // Now detects the Soft Return flag
         }
-            
     }
-    
 }
