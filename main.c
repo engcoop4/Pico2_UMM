@@ -1,7 +1,7 @@
 // C/R-Pi libraries
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/uart.h" // find version of this and SPI lines for standard GPIO
+#include "hardware/uart.h" 
 #include "hardware/spi.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
