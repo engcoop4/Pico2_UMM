@@ -117,6 +117,18 @@ char const *display_title[5] = {
     "Frequency",
     "CUSTOM DISPLAY"};
 
+const WFI_ScreenFunction Screen_Changes[9] = {
+    ControlsDisplay,
+    TouchDecision,
+    TouchCalibration,
+    OperatingMode,
+    NumberDisplays,
+    ChannelSel,
+    NULL,
+    NULL,
+    NULL
+};
+
 //------------------------------------------------------------------------------------------LCD GRAPHIC DISPLAY-----------------------------------------------------------------------------------------------------------
 void LCDSetup(void)
 {
@@ -680,40 +692,8 @@ void TouchDetection(void)
 // possible to break this down into even smaller functions, but may be overkill to do all of that
 void UIDispatcher(void)
 {
-    switch (current_screen)
-    {
-    // controls display, only input option is ENTER to progress (possibly removed/replaced with other screens like cmd explanation screen ?)
-    case Screen_ControlsDisplay:
-        ControlsDisplay();
-        break;
-
-    // menu screen for enable/disable touch
-    case Screen_TouchDecision:
-        TouchDecision();
-        break;
-
-    // needs to respond to touch ONLY, no button presses for calibration
-    // code at bottom will scan for X and Y coordinate values
-    // kills interrupt - how does this work with how the R-Pi handles interrupts ?
-    case Screen_TouchCalibration:
-        TouchCalibration();
-
-        break;
-    // Displays the various operating modes, compares b2 and b1 to see if any button was pressed
-    // if it was, move cursor position by the difference, check bounds to ensure cursor never goes past 4 or below 0
-    case Screen_OperatingMode:
-        OperatingMode();
-        break;
-
-    // Increment number of displays if SW1 pressed, decrement if SW2 pressed
-    case Screen_NumberDisplays:
-        NumberDisplays();
-        break;
-
-    // Increment channel selection if SW1 pressed, decrement if SW2 pressed
-    case Screen_ChannelSelection:
-        ChannelSel();
-        break;
+    if(current_screen < WFI_SCREENS && Screen_Changes[current_screen] != NULL) {
+        Screen_Changes[current_screen]();
     }
 }
 

@@ -28,9 +28,15 @@
 #define TP2_low (P3OUT &= ~BIT3)
 
 // function pointer declaration
-typedef void (*ScreenFunction)(void);
+typedef void (*MainScreenFunction)(void);
 
-extern const ScreenFunction Screen_Options[9];
+#define NUM_MAIN_SCREENS 9
+extern const MainScreenFunction Screen_Options[9];
+
+#define WFI_SCREENS 6
+typedef void (*WFI_ScreenFunction)(void);
+
+extern const WFI_ScreenFunction Screen_Changes[9];
 
 typedef enum
 { // enumeration - used to assign meaningful names to integer values

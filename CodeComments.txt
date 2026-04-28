@@ -1,3 +1,8 @@
+20260428RW: Switch case architecture of main.c and LCDProcessing.c changed to a function pointer architecture for ease of reading per recommendation. Also allows for future screens to be more
+easily added, as they would simply be added as functions and then the enum and function pointer arrays would be updated.
+
+Fixed button implementation, the lock_engaged variable was broken when WaitForInput was broken up.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260424RW: Improvements made to cursor function, most likely could continue to be improved upon but the cursor itself is a testing function and will not be in the final implementation
 so it is not a high priority. It is used primarily to fine-tune equations for touch accuracy.
 

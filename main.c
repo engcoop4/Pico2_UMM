@@ -34,7 +34,7 @@ volatile uint8_t uart_command_received = 0;
 volatile uint8_t return_request_flag = 0;
 volatile uint8_t entry_method = 0;
 
-const ScreenFunction Screen_Options[9] = {
+const MainScreenFunction Screen_Options[9] = {
     MENU_ControlsDisplay,
     MENU_TouchScreenDecision,
     MENU_TouchCalibration,
@@ -82,7 +82,7 @@ int main()
             */
             if (force_redraw)
             {
-                if (current_screen < 9 && Screen_Options[current_screen] != NULL)
+                if (current_screen < NUM_MAIN_SCREENS && Screen_Options[current_screen] != NULL)
                 {
                     Screen_Options[current_screen]();
                 }
