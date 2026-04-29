@@ -82,7 +82,7 @@ int main()
     add_repeating_timer_ms(-10, timer_callback_reset_check, NULL, &timer);
 
     // Enable Watchdog for the Hard Reset functionality
-    watchdog_enable(8000, 1);
+    watchdog_enable(2000, 1);
 
     // 4. Initial Screen Draw
     LCDSetup();
@@ -115,7 +115,7 @@ int main()
         {
             // 1. Run your high-speed ADC/DMA Metering logic here
             // Run_Metering_Cycle(); 
-
+            watchdog_update();
             // 2. Check for the Short-Press Return flag from the timer
             if (timer_return_flag) 
             {
