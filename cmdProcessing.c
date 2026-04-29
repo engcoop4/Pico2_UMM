@@ -1482,28 +1482,28 @@ bool ParseRCI(void)
 }
 
 void ServiceSerialHardware(void) {
-    // 1. Get a character from the SDK/USB buffer. 
-    // This is non-blocking; it returns PICO_ERROR_TIMEOUT if no char is waiting.
-    int c = getchar_timeout_us(0); 
+    // Make sure the pin is an output
+    gpio_init(LED1);
+    gpio_set_dir(LED1, GPIO_OUT);
 
-    // 2. Loop while there are characters to get (in case a whole string arrived)
+    int c = getchar_timeout_us(0); 
     while (c != PICO_ERROR_TIMEOUT) {
         
-        // Put the character into your legacy buffer
+        // PHYSICAL DIAGNOSTIC: Toggle GP6 every time a byte arrives
+        gpio_put(LED1, !gpio_get(LED1)); 
+        
+        // Log back to terminal to see what the Pico thinks it's getting
+        printf("{Rx:0x%02X}", (uint8_t)c);
+        fflush(stdout);
+
+        // Your existing logic
         rt.HostRxBuff[rt.HostRxBuffPtr] = (char)c;
-        
-        // Increment and wrap the pointer (assuming 256 byte buffer)
         rt.HostRxBuffPtr = (rt.HostRxBuffPtr + 1) & (HOST_RX_BUFF_LEN - 1);
-        
-        // Set your legacy flag so ParseRCI knows to look at it
         setBit(rt.Host, CharAvailableFlag);
 
-        // Check for the 'Enter' key (Line Feed or Carriage Return)
         if (c == '\r' || c == '\n') {
             setBit(rt.Host, CmdAvailFlag);
         }
-
-        // Check if there's another character waiting immediately
         c = getchar_timeout_us(0);
     }
 }

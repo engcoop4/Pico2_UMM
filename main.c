@@ -63,73 +63,50 @@ char const *display_unit[6] = {
     "W",
     "Hz"};
 
-int main()
-{
-    // 1. Basic System Init
-    sleep_ms(100);
+#include "pico/stdlib.h"
+#include <stdio.h>
+
+#define LED1 6 // Ensure this matches your GP pin for LED1
+
+int main() {
     stdio_init_all();
 
-    // 2. Hardware Peripheral Setup (Crucial: Do this BEFORE starting the timer)
-    Buttons_Init();  // Initializes ADC and GPIOs
-    LEDs_Init();
-    SPI_init();
-    LCD_DMA_Init();
-    
-    // 3. Prepare the Background Monitor
-    static struct repeating_timer timer; // Static ensures it persists in memory
-    
-    // Start the 10ms background polling
-    add_repeating_timer_ms(-10, timer_callback_reset_check, NULL, &timer);
+    // Initialize LED1 immediately so we can see status
+    gpio_init(LED1);
+    gpio_set_dir(LED1, GPIO_OUT);
+    gpio_put(LED1, 1); // OFF (Active Low)
 
-    // Enable Watchdog for the Hard Reset functionality
-    watchdog_enable(2000, 1);
+    // Wait for terminal connection
+    while (!stdio_usb_connected()) {
+        sleep_ms(10);
+    }
 
-    // 4. Initial Screen Draw
-    LCDSetup();
+    // Single burst to terminal
+    printf("\r\n--- HARDWARE RAW RX TEST ---\r\n");
+    fflush(stdout);
 
-    /* ----- MAIN LOOP ----- */
-    while (1)
-    {
-        // --- PHASE 1: UI / SETUP ---
-        // Runs until current_screen == InitializationDone
-        while (current_screen != InitializationDone)
-        {
-            watchdog_update();
-            ParseRCI();
-            if (force_redraw)
-            {
-                if (current_screen < NUM_MAIN_SCREENS && Screen_Options[current_screen] != NULL)
-                {
-                    Screen_Options[current_screen]();
-                }
-                force_redraw = false;
-            }
-            WaitForInput();
+    while (true) {
+        // HEARTBEAT (10ms blink every ~100ms)
+        gpio_put(LED1, 0); 
+        sleep_ms(10);
+        gpio_put(LED1, 1);
+
+        // RAW GETCHAR
+        int c = getchar_timeout_us(0);
+
+        if (c != PICO_ERROR_TIMEOUT) {
+            // If the chip sees ANY byte, LED1 stays ON for 2 seconds
+            // This bypasses any terminal display issues
+            gpio_put(LED1, 0); 
+            
+            // Send back exactly what was received
+            printf("RX: %c\n", (char)c);
+            fflush(stdout);
+            
+            sleep_ms(2000); 
+            gpio_put(LED1, 1);
         }
 
-        // --- PHASE 2: ACTIVE METERING ---
-        // This is where your DMA-based voltage readings happen.
-        // Because the timer is global, the 3-second Hard Reset is active here!
-        
-        while (current_screen == InitializationDone) 
-        {
-            // will control voltage updates from metering chip
-            // Run_Metering_Cycle(); 
-
-            watchdog_update();
-            // check for simple return
-            if (timer_return_flag) 
-            {
-                timer_return_flag = false; // Consume flag
-                
-                // de-initialize DMA/stop transfering data from metering chip
-                // Stop_DMA_Transfers(); 
-                
-                // if want CUSTOM screen to return to channel select, modify this
-                current_screen = Screen_OperatingMode; // Or your preferred back-page
-                force_redraw = true;
-                break; // Break back into the Setup Loop
-            }
-        }
+        sleep_ms(90);
     }
 }
