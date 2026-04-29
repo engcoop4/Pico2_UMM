@@ -66,14 +66,16 @@ char const *display_unit[6] = {
 #include "pico/stdlib.h"
 #include <stdio.h>
 
-int main() {
+int main()
+{
     // 1. Hardware Init
     stdio_init_all();
-    
+
     LEDs_Init();
 
     // 2. Wait for PuTTY
-    while (!stdio_usb_connected()) {
+    while (!stdio_usb_connected())
+    {
         sleep_ms(10);
     }
 
@@ -85,32 +87,37 @@ int main() {
     printf("Testing: ServiceSerialHardware & processChar\r\n> ");
     fflush(stdout);
 
-    while (true) {
-        // HEARTBEAT
+    while (true)
+    {
+        // 1. Heartbeat
         static uint32_t last_heartbeat = 0;
-        if (to_ms_since_boot(get_absolute_time()) - last_heartbeat > 500) {
-            gpio_xor_mask(1 << LED1); 
+        if (to_ms_since_boot(get_absolute_time()) - last_heartbeat > 500)
+        {
+            gpio_xor_mask(1 << LED1);
             last_heartbeat = to_ms_since_boot(get_absolute_time());
         }
 
-        // STEP A: Pull hardware bytes into rt.HostRxBuff
+        // 2. Capture and Echo
         ServiceSerialHardware();
-
-        // STEP B: Process the buffer (Echo, Backspace logic)
-        // We call this manually here to see if characters echo back to PuTTY
-        if (testBit(rt.Host, CharAvailableFlag)) {
-            processChar(); 
-            // processChar clears CharAvailableFlag when done
+        if (testBit(rt.Host, CharAvailableFlag))
+        {
+            processChar();
         }
 
-        // STEP C: Monitor Command Trigger
-        if (testBit(rt.Host, CmdAvailFlag)) {
-            printf("\r\n[SYSTEM]: Command detected in buffer! Clearing for next test.\r\n> ");
-            ClearRxBuffer(); 
-            // We clear it here so you can keep testing echos 
-            // without the parser interfering yet.
+        // 3. THE TEST: The Command Parser
+        if (testBit(rt.Host, CmdAvailFlag))
+        {
+            printf("\r\n[PARSER]: Analyzing buffer...\r\n");
+
+            // This is the function that searches your rci[] table
+            ParseRCI();
+
+            // After ParseRCI runs, it should have cleared the CmdAvailFlag
+            // and printed either the command output or an error.
+            printf("> ");
+            fflush(stdout);
         }
 
-        tight_loop_contents(); // Optimization for RP2350
+        tight_loop_contents();
     }
 }
