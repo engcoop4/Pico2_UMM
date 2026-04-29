@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-// #include "TouchScreeninit.h"
+#include "TouchScreeninit.h"
 #include "AdafruitDisplayInits.h"
 #include "Global.h"
 
@@ -600,78 +600,56 @@ void InitYPositions(void)
     }
 }
 
-void WaitForInput(void)
-{
-    // manually reset buttons on each new waitforinput because theoretically each new waitforinput should be waiting for an input or processing a single one
+void WaitForInput(void) {
     b1_pressed = 0;
     b2_pressed = 0;
     enter_pressed = 0;
     return_pressed = 0;
 
-    // if a touch is triggered, set up correct ADC and take measurements of X and Y coordinates
-    // else, check buttons for input
-    if (touch_triggered)
-    {
+    // Check if the timer caught a return press
+    if (timer_return_flag) {
+        return_pressed = 1;
+        timer_return_flag = false; // Consume the flag
+    }
+
+    if (touch_triggered) {
         TouchDetection();
-    }
-    else if (!touch_triggered)
-    {
-        ButtonPolling();
+        // Professional Touch Priority: If a touch happened, 
+        // we can ignore any button presses that happened simultaneously.
+        timer_return_flag = false; 
+    } else {
+        ButtonPolling(); // Now only handles Up, Down, and Enter
     }
 
-    // change screen and process inputs in UIDispatcher
     UIDispatcher();
-
-    // most likely will be phased out, used primarily for testing calibration accuracy
     CursorFunction();
 }
 
 // handles button polling of WaitForInput (allows for removal of button logic in main WaitForInput)
-void ButtonPolling(void)
-{
+void ButtonPolling(void) {
     static bool lock_engaged = false;
     adc_select_input(2);
-    busy_wait_us(10);
+    uint16_t adc_val = adc_read();
 
-    uint16_t adc_val = adc_read(); // take adc value
-
-    // no buttons pressed if falls under 500, "unlocks"
-    if (adc_val < WFI_BUT_THRESH_NP)
-    {
+    if (adc_val < WFI_BUT_THRESH_NP) {
         lock_engaged = false;
     }
 
-    // if lock is not engaged and adc value is above 700, we can say "a button is being pressed"
-    if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
-    {
-
-        // wait for SPI noise to pass (even with filters included, SPI communication causes noise spikes)
+    if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P) {
         sleep_ms(5);
-
-        // take a confirmation reading to ensure its not just a random spike
         adc_val = adc_read();
 
-        // button value reads at 4071, use 3725 for expected tolerance across parts, if above this threshold, ENTER is being pressed
-        if (adc_val >= WFI_BUT_ENTER_THRESH_P)
-        {
+        if (adc_val >= WFI_BUT_ENTER_THRESH_P) {
             enter_pressed = 1;
             lock_engaged = true;
         }
-        // button value reads at 2780, use 2480 (low) and 2980 (high) for expected tolerance across parts, if between this threshold, RETURN is being pressed
-        else if (adc_val >= WFI_BUT_RETURN_THRESH_P_L && adc_val <= WFI_BUT_RETURN_THRESH_P_HI)
-        {
-            return_pressed = 1;
-            lock_engaged = true;
-        }
-        // button value reads at 2048, use 1737 (low) and 2234 (high) for expected tolerance across parts, if between this threshold, DOWN is being pressed
-        else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
-        {
+        // REMOVED: RETURN block is now handled by the timer!
+        
+        else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI) {
             b2_pressed = 1;
             lock_engaged = true;
         }
-        // button value reads at 1365, use 992 (low) and 1489 (high) for expected tolerance across parts, if between this threshold, UP is being pressed
-        else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
-        {
+        else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI) {
             b1_pressed = 1;
             lock_engaged = true;
         }

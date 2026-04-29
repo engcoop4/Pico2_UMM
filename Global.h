@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "hardware/timer.h"
 
 // changing to lower value changes display quicker but consumes CPU resources more
 // changing to higher value changes display slower but frees up CPU more
@@ -54,6 +55,7 @@ typedef enum
 extern volatile State_of_Screen current_screen;
 extern volatile bool force_redraw;
 extern volatile uint8_t uart_command_received;
+extern volatile bool timer_return_flag;
 
 extern char const *display_unit[6];
 

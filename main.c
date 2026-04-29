@@ -7,6 +7,7 @@
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/timer.h"
+#include "hardware/watchdog.h"
 
 // Initialization/hardware
 #include "initSPI.h"
@@ -64,28 +65,36 @@ char const *display_unit[6] = {
 
 int main()
 {
+    // 1. Basic System Init
     sleep_ms(100);
     stdio_init_all();
 
-    Buttons_Init();
+    // 2. Hardware Peripheral Setup (Crucial: Do this BEFORE starting the timer)
+    Buttons_Init();  // Initializes ADC and GPIOs
     LEDs_Init();
-
-    // 2. Initialize ONLY the SPI1 and LCD pins
     SPI_init();
     LCD_DMA_Init();
+    
+    // 3. Prepare the Background Monitor
+    static struct repeating_timer timer; // Static ensures it persists in memory
+    
+    // Start the 10ms background polling
+    add_repeating_timer_ms(-10, timer_callback_reset_check, NULL, &timer);
 
+    // Enable Watchdog for the Hard Reset functionality
+    watchdog_enable(8000, 1);
+
+    // 4. Initial Screen Draw
     LCDSetup();
 
     /* ----- MAIN LOOP ----- */
     while (1)
     {
-        // runs until current_screen == InitializationDone (changes in DisplayChannels)
+        // --- PHASE 1: UI / SETUP ---
+        // Runs until current_screen == InitializationDone
         while (current_screen != InitializationDone)
         {
-            /*
-            uart_command_received = 0;
-            ParseRCI();
-            */
+            watchdog_update();
             if (force_redraw)
             {
                 if (current_screen < NUM_MAIN_SCREENS && Screen_Options[current_screen] != NULL)
@@ -95,6 +104,32 @@ int main()
                 force_redraw = false;
             }
             WaitForInput();
+        }
+
+        // --- PHASE 2: ACTIVE METERING ---
+        // This is where your DMA-based voltage readings happen.
+        // Because the timer is global, the 3-second Hard Reset is active here!
+        
+        while (current_screen == InitializationDone) 
+        {
+            // 1. Run your high-speed ADC/DMA Metering logic here
+            // Run_Metering_Cycle(); 
+
+            // 2. Check for the Short-Press Return flag from the timer
+            if (timer_return_flag) 
+            {
+                timer_return_flag = false; // Consume flag
+                
+                // Logic to "stop" metering and go back to menu
+                // Stop_DMA_Transfers(); 
+                
+                current_screen = Screen_OperatingMode; // Or your preferred back-page
+                force_redraw = true;
+                break; // Break back into the Setup Loop
+            }
+            
+            // Optional: Small sleep or watchdog update if your metering is slow
+            // watchdog_update(); 
         }
     }
 }

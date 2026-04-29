@@ -56,5 +56,6 @@ void LEDs_Init(void);
 // --- Helper Macros ---
 // Replaces pgm_read_byte for compatibility
 #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
+bool timer_callback_reset_check(struct repeating_timer *t);
 
 #endif /* HARDWARE_H_ */
