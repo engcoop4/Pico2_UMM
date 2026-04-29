@@ -95,6 +95,7 @@ int main()
         while (current_screen != InitializationDone)
         {
             watchdog_update();
+            ParseRCI();
             if (force_redraw)
             {
                 if (current_screen < NUM_MAIN_SCREENS && Screen_Options[current_screen] != NULL)
