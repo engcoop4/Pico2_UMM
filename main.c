@@ -1,7 +1,7 @@
 // C/R-Pi libraries
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/uart.h" 
+#include "hardware/uart.h"
 #include "hardware/spi.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
@@ -33,6 +33,14 @@ volatile bool force_redraw = true;
 volatile uint8_t uart_command_received = 0;
 volatile uint8_t return_request_flag = 0;
 volatile uint8_t entry_method = 0;
+
+volatile uint32_t ADCbuffer[NUM_SD24_ADC_CHANNELS]; // required to be 32-bit since SD24 memory holds 32-bit (8 bits of sign extension + 24-bit)
+volatile uint16_t pulse_width;
+uint pwm_channel;
+volatile bool force_full_redraw = false;
+SYS_SPECIFIC_DATA SysData;
+
+RealTimeVars rt;
 
 const MainScreenFunction Screen_Options[9] = {
     MENU_ControlsDisplay,

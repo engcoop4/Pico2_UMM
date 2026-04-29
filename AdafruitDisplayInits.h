@@ -30,6 +30,8 @@
 
 #define FONT_WIDTH 12    // 12 pixels wide per character
 #define FONT_HEIGHT 16   // 16 pixels tall per character
+#define COL_SPACING 8
+#define ROW_SPACING 6
 
 void LCD_selectLCD(void);
 void LCD_deselectLCD();

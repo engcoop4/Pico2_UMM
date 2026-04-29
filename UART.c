@@ -9,43 +9,32 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "UART.h"
 #include "Global.h"
-
+#include "UART.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
 
-#define MODE_SMCLK_115200 115200
-#define MODE_SMCLK_9600 9600
-#define MODE_SMCLK_230400 230400
-
-// current mode
-#define UART_MODE MODE_SMCLK_9600
-
-// Map your MSP430 P3.0/P3.1 pins to RP2350 GPIOs
-// (Adjust these numbers to your actual PCB layout)
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
-#define UART_ID uart0
+// DEFINITION: Allocate the actual memory here
+uint32_t UART_BAUD = MODE_SMCLK_9600; 
 
 void initUART()
 {
-    // 1. Initialize UART at the requested baud rate
-    // This replaces all the UCA0BRW and UCA0MCTLW math
-    uart_init(UART_ID, UART_MODE);
+    // 1. uart_init RETURNS the actual baud rate achieved. 
+    // This removes the need for a separate "get" function call.
+    UART_BAUD = uart_init(UART_ID, UART_BAUD);
 
-    // 2. Setup GPIO Pins (Replaces your initGPIO)
+    // 2. Setup GPIO Pins
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
 
-    // 3. Data Format (8N1 is standard, matching your MSP430 setup)
+    // 3. Data Format (8N1)
     uart_set_format(UART_ID, 8, 1, UART_PARITY_NONE);
 
-    // 4. Enable FIFOs (The RP2350 has a 32-deep buffer, which is a huge upgrade)
+    // 4. Enable FIFOs (32-byte deep buffers)
     uart_set_fifo_enabled(UART_ID, true);
-
-    // 5. Interrupts (Replaces UCA0IE |= UCRXIE)
-    // You'll need to define a handler function to actually catch the data
-    // uart_set_irq_enables(UART_ID, true, false);
+    
+    // 5. Final check (Optional)
+    // You can remove the line: UART_BAUD = uart_get_baudrate(UART_ID);
+    // Because step 1 already handled it.
 }
