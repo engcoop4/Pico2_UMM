@@ -113,24 +113,23 @@ int main()
         
         while (current_screen == InitializationDone) 
         {
-            // 1. Run your high-speed ADC/DMA Metering logic here
+            // will control voltage updates from metering chip
             // Run_Metering_Cycle(); 
+
             watchdog_update();
-            // 2. Check for the Short-Press Return flag from the timer
+            // check for simple return
             if (timer_return_flag) 
             {
                 timer_return_flag = false; // Consume flag
                 
-                // Logic to "stop" metering and go back to menu
+                // de-initialize DMA/stop transfering data from metering chip
                 // Stop_DMA_Transfers(); 
                 
+                // if want CUSTOM screen to return to channel select, modify this
                 current_screen = Screen_OperatingMode; // Or your preferred back-page
                 force_redraw = true;
                 break; // Break back into the Setup Loop
             }
-            
-            // Optional: Small sleep or watchdog update if your metering is slow
-            // watchdog_update(); 
         }
     }
 }
