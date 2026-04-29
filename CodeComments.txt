@@ -1,3 +1,8 @@
+20260429RW: Begin testing of cmdProcessing functions after they have been integrated for R-Pi architecture. Basic testing completed, and the results show that the VS terminal is either
+incorrectly configured, or cannot be used for testing. It will allow messages to be sent (i.e. a banner such as: --- HARDWARE RAW RX TEST ---), but will not display characters sent via the keyboard. This
+was also tested using LEDs, but through the VS terminal, it seemed that the Pico never received any characters (Pico -> PC connection good, PC -> Pico connection bad). The same code was tested using PuTTY (session
+saved under RPi UMM COM 8 115200), and it proved to work. Further testing of the actual functions required, but communication is possible through USB-C. 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260428RW: Switch case architecture of main.c and LCDProcessing.c changed to a function pointer architecture for ease of reading per recommendation. Also allows for future screens to be more
 easily added, as they would simply be added as functions and then the enum and function pointer arrays would be updated.
 
@@ -32,7 +37,7 @@ touch_baseline or the MARGIN value being too large/too small.
 2. Figure out how to re-enable interrupts consistently after measurements are taken. In theory, the callback function used for the interrupts should allow the interrupt enable flags to be automatically cleared and set 
 when it is called, but this may need to be done manually in the code as well since it is not triggering. If this manual fix is not possible/does not work, it is most certainly a pin configuration issue, and the Y_MINUS interrupt is never
 properly triggering because that pin is not being reset to the state it needs to be in for the interrupt.
-3. Get the cursor function to work (hopefully should automatically begin working with #2 is fixed)
+3. Get the cursor function to work (hopefully should automatically begin working with #2 fixed)
 
 Updates:
 Moving the X and Y coordinate readings will offer consistent interrupt measurements. The cursor however is very slow, and sporadic. Not as precise as it is on the msp430.

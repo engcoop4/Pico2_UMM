@@ -66,47 +66,51 @@ char const *display_unit[6] = {
 #include "pico/stdlib.h"
 #include <stdio.h>
 
-#define LED1 6 // Ensure this matches your GP pin for LED1
-
 int main() {
+    // 1. Hardware Init
     stdio_init_all();
+    
+    LEDs_Init();
 
-    // Initialize LED1 immediately so we can see status
-    gpio_init(LED1);
-    gpio_set_dir(LED1, GPIO_OUT);
-    gpio_put(LED1, 1); // OFF (Active Low)
-
-    // Wait for terminal connection
+    // 2. Wait for PuTTY
     while (!stdio_usb_connected()) {
         sleep_ms(10);
     }
 
-    // Single burst to terminal
-    printf("\r\n--- HARDWARE RAW RX TEST ---\r\n");
+    // 3. Clear state
+    ClearRxBuffer();
+    setBit(rt.Host, CharEchoFlag); // Enable the software echo we want to test
+
+    printf("\r\n--- Phase 1: Echo & Buffer Test ---\r\n");
+    printf("Testing: ServiceSerialHardware & processChar\r\n> ");
     fflush(stdout);
 
     while (true) {
-        // HEARTBEAT (10ms blink every ~100ms)
-        gpio_put(LED1, 0); 
-        sleep_ms(10);
-        gpio_put(LED1, 1);
-
-        // RAW GETCHAR
-        int c = getchar_timeout_us(0);
-
-        if (c != PICO_ERROR_TIMEOUT) {
-            // If the chip sees ANY byte, LED1 stays ON for 2 seconds
-            // This bypasses any terminal display issues
-            gpio_put(LED1, 0); 
-            
-            // Send back exactly what was received
-            printf("RX: %c\n", (char)c);
-            fflush(stdout);
-            
-            sleep_ms(2000); 
-            gpio_put(LED1, 1);
+        // HEARTBEAT
+        static uint32_t last_heartbeat = 0;
+        if (to_ms_since_boot(get_absolute_time()) - last_heartbeat > 500) {
+            gpio_xor_mask(1 << LED1); 
+            last_heartbeat = to_ms_since_boot(get_absolute_time());
         }
 
-        sleep_ms(90);
+        // STEP A: Pull hardware bytes into rt.HostRxBuff
+        ServiceSerialHardware();
+
+        // STEP B: Process the buffer (Echo, Backspace logic)
+        // We call this manually here to see if characters echo back to PuTTY
+        if (testBit(rt.Host, CharAvailableFlag)) {
+            processChar(); 
+            // processChar clears CharAvailableFlag when done
+        }
+
+        // STEP C: Monitor Command Trigger
+        if (testBit(rt.Host, CmdAvailFlag)) {
+            printf("\r\n[SYSTEM]: Command detected in buffer! Clearing for next test.\r\n> ");
+            ClearRxBuffer(); 
+            // We clear it here so you can keep testing echos 
+            // without the parser interfering yet.
+        }
+
+        tight_loop_contents(); // Optimization for RP2350
     }
 }

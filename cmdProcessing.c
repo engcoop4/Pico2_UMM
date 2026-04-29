@@ -1276,77 +1276,31 @@ void SendCrLf(void)
     PutTwoChars(256 * '\r' + '\n'); // CRLF;
 }
 
-void processChar(void)
-{
-    char tmp_char; // 'register' is unnecessary on ARM
+void processChar(void) {
+    char tmp_char;
 
-    // Safety check: ensure we don't process if the buffer is empty
-    if (rt.HostRxBuffPtr == rt.EchoRxBuffPtr)
-    {
-        goto exit_ProcessChar;
-    }
-
-    // 1. Initial Backspace/Delete Check (at start of buffer)
-    tmp_char = rt.HostRxBuff[rt.EchoRxBuffPtr];
-    if ((tmp_char == '\b') || (tmp_char == 0x7F))
-    {
-        // If the very first char is a backspace, just reset
-        if (rt.HostRxBuffPtr == 0)
-        {
-            rt.EchoRxBuffPtr = 0;
-        }
-    }
-
-    // 2. Processing Loop
-    while (rt.EchoRxBuffPtr != rt.HostRxBuffPtr)
-    {
+    // While there are characters in the hardware buffer that haven't been echoed
+    while (rt.EchoRxBuffPtr != rt.HostRxBuffPtr) {
         tmp_char = rt.HostRxBuff[rt.EchoRxBuffPtr];
 
-        if (tmp_char == 0)
-        {
-            if (testBit(rt.Host, CharEchoFlag))
-                SendCrLf();
-            goto exit_ProcessChar;
-        }
-        // 3. Handle Backspace ('\b') or Delete (0x7F)
-        else if ((tmp_char == '\b') || (tmp_char == 0x7F))
-        {
-            if (rt.HostRxBuffPtr > 0)
-            {
-                // Remove the backspace char AND the char before it
-                rt.HostRxBuffPtr--;
-                if (rt.HostRxBuffPtr > 0)
-                    rt.HostRxBuffPtr--;
-
-                rt.HostRxBuff[rt.HostRxBuffPtr] = 0;
-
-                if (testBit(rt.Host, CharEchoFlag))
-                {
-                    // Standard terminal backspace sequence: Back, Space, Back
-                    cputs("\b \b");
-                }
+        // 1. Handle Backspace (0x08) or Delete (0x7F)
+        if ((tmp_char == '\b') || (tmp_char == 0x7F)) {
+            // We only visually back up. 
+            // We don't rewind the HostRxBuffPtr here because it causes the "abcabc" loop.
+            if (testBit(rt.Host, CharEchoFlag)) {
+                printf("\b \b"); 
+                fflush(stdout);
             }
-            // Move echo pointer past the backspace command
-            rt.EchoRxBuffPtr++;
-        }
-        // 4. Echo valid characters
-        else if (testBit(rt.Host, CharEchoFlag))
-        {
-            // Echo the character that was just received
-            PutChar(tmp_char);
-            rt.EchoRxBuffPtr++;
-        }
-        else
-        {
-            rt.EchoRxBuffPtr++;
+        } 
+        // 2. Handle Normal Characters
+        else if (testBit(rt.Host, CharEchoFlag)) {
+            putchar(tmp_char);
+            fflush(stdout);
         }
 
-        // 5. Circular Buffer Wrap-around
-        // HOST_RX_BUFF_LEN must be a power of 2 (e.g., 256) for this mask to work
-        rt.EchoRxBuffPtr &= (HOST_RX_BUFF_LEN - 1);
+        // 3. Move the Echo pointer forward
+        rt.EchoRxBuffPtr = (rt.EchoRxBuffPtr + 1) & (HOST_RX_BUFF_LEN - 1);
     }
-
-exit_ProcessChar:
     clearBit(rt.Host, CharAvailableFlag);
 }
 
@@ -1482,25 +1436,18 @@ bool ParseRCI(void)
 }
 
 void ServiceSerialHardware(void) {
-    // Make sure the pin is an output
-    gpio_init(LED1);
-    gpio_set_dir(LED1, GPIO_OUT);
-
     int c = getchar_timeout_us(0); 
     while (c != PICO_ERROR_TIMEOUT) {
-        
-        // PHYSICAL DIAGNOSTIC: Toggle GP6 every time a byte arrives
-        gpio_put(LED1, !gpio_get(LED1)); 
-        
-        // Log back to terminal to see what the Pico thinks it's getting
-        printf("{Rx:0x%02X}", (uint8_t)c);
-        fflush(stdout);
-
-        // Your existing logic
+        // Store character in buffer
         rt.HostRxBuff[rt.HostRxBuffPtr] = (char)c;
+        
+        // Advance pointer with power-of-2 wrap
         rt.HostRxBuffPtr = (rt.HostRxBuffPtr + 1) & (HOST_RX_BUFF_LEN - 1);
+        
+        // Set flag for processChar
         setBit(rt.Host, CharAvailableFlag);
 
+        // Check for Enter
         if (c == '\r' || c == '\n') {
             setBit(rt.Host, CmdAvailFlag);
         }
