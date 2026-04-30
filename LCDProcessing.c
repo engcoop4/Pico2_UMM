@@ -118,15 +118,16 @@ char const *display_title[5] = {
     "CUSTOM DISPLAY"};
 
 const WFI_ScreenFunction Screen_Changes[9] = {
-    ControlsDisplay,
-    TouchDecision,
-    TouchCalibration,
-    OperatingMode,
-    NumberDisplays,
-    ChannelSel,
-    NULL,
-    NULL,
-    NULL};
+    [Screen_ControlsDisplay] = ControlsDisplay,
+    [Screen_TouchDecision] = TouchDecision,
+    [Screen_TouchCalibration] = TouchCalibration,
+    [Screen_OperatingMode] = OperatingMode,
+    [Screen_NumberDisplays] = NumberDisplays,
+    [Screen_ChannelSelection] = ChannelSel,
+    [Index_PresetConfigs] = NULL,      // If you have logic for this
+    [Screen_DisplayChannels] = NULL,   // If you have logic for this
+    [Screen_Metering] = ActiveMetering // Now explicitly mapped to 8
+};
 
 //------------------------------------------------------------------------------------------LCD GRAPHIC DISPLAY-----------------------------------------------------------------------------------------------------------
 void LCDSetup(void)
@@ -585,7 +586,7 @@ void DisplayChannels(void)
         // draw_pixel(219, 12, RED);
     }
 
-    current_screen = InitializationDone;
+    current_screen = Screen_Metering;
     screen_updating = false;
     TouchInterrupt_Helper();
 }
@@ -600,56 +601,66 @@ void InitYPositions(void)
     }
 }
 
-void WaitForInput(void) {
+void WaitForInput(void)
+{
     b1_pressed = 0;
     b2_pressed = 0;
     enter_pressed = 0;
     return_pressed = 0;
 
     // Check if the timer caught a return press
-    if (timer_return_flag) {
+    if (timer_return_flag)
+    {
         return_pressed = 1;
         timer_return_flag = false; // Consume the flag
     }
 
-    if (touch_triggered) {
+    if (touch_triggered)
+    {
         TouchDetection();
-        // Professional Touch Priority: If a touch happened, 
+        // Professional Touch Priority: If a touch happened,
         // we can ignore any button presses that happened simultaneously.
-        timer_return_flag = false; 
-    } else {
+        timer_return_flag = false;
+    }
+    else
+    {
         ButtonPolling(); // Now only handles Up, Down, and Enter
     }
 
-    UIDispatcher();
     CursorFunction();
 }
 
 // handles button polling of WaitForInput (allows for removal of button logic in main WaitForInput)
-void ButtonPolling(void) {
+void ButtonPolling(void)
+{
     static bool lock_engaged = false;
     adc_select_input(2);
     uint16_t adc_val = adc_read();
 
-    if (adc_val < WFI_BUT_THRESH_NP) {
+    if (adc_val < WFI_BUT_THRESH_NP)
+    {
         lock_engaged = false;
     }
 
-    if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P) {
+    if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
+    {
         sleep_ms(5);
         adc_val = adc_read();
 
-        if (adc_val >= WFI_BUT_ENTER_THRESH_P) {
+        if (adc_val >= WFI_BUT_ENTER_THRESH_P)
+        {
             enter_pressed = 1;
             lock_engaged = true;
         }
         // REMOVED: RETURN block is now handled by the timer!
-        
-        else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI) {
+
+        else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
+        {
             b2_pressed = 1;
             lock_engaged = true;
         }
-        else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI) {
+        else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
+        {
             b1_pressed = 1;
             lock_engaged = true;
         }
@@ -1011,5 +1022,31 @@ void CursorFunction(void)
                 gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
             }
         }
+    }
+}
+
+void ActiveMetering(void)
+{
+    // 1. DATA ACQUISITION & DISPLAY
+    // Read your chip and update the LCD here
+    // Run_Metering_Cycle();
+
+    // 2. CONTEXT-AWARE RETURN (Non-Blocking)
+    if (timer_return_flag)
+    {
+        timer_return_flag = false; // Consume the flag
+
+        // Use logic to decide where to go back to
+        if (entry_method == ENTRY_CUSTOM)
+        {
+            current_screen = Screen_ChannelSelection;
+        }
+        else
+        {
+            current_screen = Screen_OperatingMode;
+        }
+
+        force_redraw = true;
+        return; // Exit function early
     }
 }

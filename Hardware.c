@@ -44,7 +44,7 @@ bool timer_callback_reset_check(struct repeating_timer *t) {
         reset_hold_counter++;
 
         // MASTER RESET: Only if in the final display mode
-        if (current_screen == InitializationDone && reset_hold_counter >= RESET_THRESHOLD) {
+        if (current_screen == Screen_Metering && reset_hold_counter >= RESET_THRESHOLD) {
             // Physical LCD Reset (Mimicking your MSP430 P3_7_low)
             // Replace LCD_RESET_PIN with your actual GP number
             gpio_put(PIN_RST, 0); 

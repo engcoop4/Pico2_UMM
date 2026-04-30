@@ -44,15 +44,15 @@ SYS_SPECIFIC_DATA SysData;
 RealTimeVars rt;
 
 const MainScreenFunction Screen_Options[9] = {
-    MENU_ControlsDisplay,
-    MENU_TouchScreenDecision,
-    MENU_TouchCalibration,
-    MENU_OperatingMode,
-    MENU_NumberOfDisplays,
-    MENU_ChannelSelection,
-    PresetConfigs,
-    DisplayChannels,
-    NULL // safety precaution for 'InitializationDone'
+    [Screen_ControlsDisplay] = MENU_ControlsDisplay,
+    [Screen_TouchDecision] = MENU_TouchScreenDecision,
+    [Screen_TouchCalibration] = MENU_TouchCalibration,
+    [Screen_OperatingMode] = MENU_OperatingMode,
+    [Screen_NumberDisplays] = MENU_NumberOfDisplays,
+    [Screen_ChannelSelection] = MENU_ChannelSelection,
+    [Index_PresetConfigs] = PresetConfigs,
+    [Screen_DisplayChannels] = DisplayChannels,
+    [Screen_Metering] = DisplayChannels // safety precaution for 'InitializationDone'
 };
 
 char const *display_unit[6] = {
@@ -63,35 +63,34 @@ char const *display_unit[6] = {
     "W",
     "Hz"};
 
-#include "pico/stdlib.h"
-#include <stdio.h>
-
 int main()
 {
-    // 1. Core Hardware
+    // core hardware
     stdio_init_all();
 
-    // GIVE USB TIME TO NEGOTIATE BEFORE STARTING INTERRUPTS
-    // This allows the PC to "see" the Pico before the timer starts firing
-    sleep_ms(1000);
+    // delay for USB
+    sleep_ms(500);
 
+    // all hardware initializations (convert to its own function ? -> avoid "losing" any of them like losing LCD_DMA_Init and bricking unit)
     LEDs_Init();
     Buttons_Init();
     SPI_init();
     LCD_DMA_Init();
     LCDSetup();
 
-    // ... timer setup ...
+    // convert to its own function ?
 
     static struct repeating_timer timer; // Static ensures it persists in memory
 
-    // Start the 10ms background polling
+    // background polls for RETURN inputs
     add_repeating_timer_ms(-10, timer_callback_reset_check, NULL, &timer);
 
-    // controls how long a restart takes, but cannot be too short or any processes that take longer than the chosen amount of time will trigger a reset
+    // controls how long a restart takes, but cannot be too short or any processes that take longer than the chosen amount of time will trigger a reset,
+    // can prolly go shorter than 3 seconds tho (kinda long, 3 seconds hold + 3 seconds reset = 6 second cycle)
+    // 1000 = 1 second, etc.
     watchdog_enable(3000, false);
 
-    // 3. Setup Logic (No blocking USB wait)
+    // command logic (gets its own function ?)
     rt.ParamPtr = NULL;
     ClearRxBuffer();
     setBit(rt.Host, CharEchoFlag);
@@ -99,37 +98,44 @@ int main()
     current_screen = Screen_ControlsDisplay;
     force_redraw = true;
 
-    // --- The Main Engine ---
     while (true)
     {
-        // Vital: Feed the dog every loop
         watchdog_update();
 
-        // Serial/Command Pump
-        ServiceSerialHardware();
+        // 1. HARDWARE SERVICE
+        ServiceSerialHardware(); // Pulls bytes from USB/UART into your buffer
+
+        // 2. COMMAND PROCESSING (The missing piece)
+        // Check if a character was received
         if (testBit(rt.Host, CharAvailableFlag))
+        {
             processChar();
+        }
+
+        // Check if a full command (like hitting 'Enter' in PuTTY) is ready
         if (testBit(rt.Host, CmdAvailFlag))
         {
+            printf("\r\n[PARSER]: Analyzing buffer...\r\n");
             ParseRCI();
             printf("> ");
             fflush(stdout);
         }
 
-        // UI Logic
-        if (current_screen != InitializationDone)
+        // 3. UI STATIC DRAW
+        if (force_redraw)
         {
-            if (force_redraw)
-            {
-                if (Screen_Options[current_screen])
-                    Screen_Options[current_screen]();
-                force_redraw = false;
-            }
-            WaitForInput();
+            if (Screen_Options[current_screen])
+                Screen_Options[current_screen]();
+            force_redraw = false;
         }
 
-        // The "USB Breather"
-        // This ensures the loop doesn't run so fast it starves the USB stack
-        sleep_ms(5);
+        // 4. UI DYNAMIC LOGIC & INPUT
+        // This calls ActiveMetering or Menu logic
+        UIDispatcher();
+
+        // This polls buttons and touch
+        WaitForInput();
+
+        sleep_ms(1);
     }
 }

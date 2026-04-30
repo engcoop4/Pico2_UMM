@@ -326,5 +326,6 @@ void OperatingMode(void);
 void NumberDisplays(void);
 void ChannelSel(void);
 void CursorFunction(void);
+void ActiveMetering(void);
 
 #endif /* LCDPROCESSING_H_ */

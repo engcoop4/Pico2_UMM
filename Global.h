@@ -31,10 +31,10 @@
 // function pointer declaration
 typedef void (*MainScreenFunction)(void);
 
-#define NUM_MAIN_SCREENS 9
+#define NUM_MAIN_SCREENS (sizeof(Screen_Options) / sizeof(Screen_Options[0]))
 extern const MainScreenFunction Screen_Options[9];
 
-#define WFI_SCREENS 6
+#define WFI_SCREENS (sizeof(Screen_Changes) / sizeof(Screen_Changes[0]))
 typedef void (*WFI_ScreenFunction)(void);
 
 extern const WFI_ScreenFunction Screen_Changes[9];
@@ -49,7 +49,7 @@ typedef enum
     Screen_ChannelSelection,
     Index_PresetConfigs,
     Screen_DisplayChannels,
-    InitializationDone
+    Screen_Metering
 } State_of_Screen;
 
 extern volatile State_of_Screen current_screen;
