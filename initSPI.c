@@ -7,22 +7,29 @@ void SPI_init()
     // changing baud rate directly changes speed (16 MHz to match speed of msp430)
     spi_init(SPI_PORT, SPI_BAUD_RATE);
 
-    // setup SPI pins - pick pin function
-    gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);  // declares GPIO10 as SPI (like multiplexing the pin to use its secondary capability rather than just GPIO)
-    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI); // declares GPIO11 as SPI
-    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI); // declares GPIO12 as SPI
+    gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
+    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
+    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
 
-    // setup chip select (will need to be modified when connected to metering chip) - which device is being spoken to
+    // 3. Setup Chip Select
     gpio_init(PIN_CS);
-    gpio_set_dir(PIN_CS, GPIO_OUT); // set PIN_CS as output (like P1DIR in CCS)
-    gpio_put(PIN_CS, 1);            // deselected (CS is an active LOW signal, so 1 disables it)
+    gpio_set_dir(PIN_CS, GPIO_OUT);
+    gpio_put(PIN_CS, 1); // Deselected
 
-    // setup LCD control pins (replaces LCD_DCinit and P11_5_MODE) - data/command
+    // 4. Setup Data/Command Pin
     gpio_init(PIN_DC);
-    gpio_set_dir(PIN_DC, GPIO_OUT); // set PIN_DC as output
-    RSUP;                           // gpio_put(PIN_DC, 1)
+    gpio_set_dir(PIN_DC, GPIO_OUT);
+    RSUP; // Default to Data mode
 
+    // 5. HARDWARE RESET SEQUENCE (Critical for "Run" mode)
     gpio_init(PIN_RST);
     gpio_set_dir(PIN_RST, GPIO_OUT);
-    RESETUP; // gpio_put(PIN_RST, 1)
+
+    RESETDOWN;    // Pull Reset LOW
+    sleep_ms(50); // Give it a solid 50ms pulse
+    RESETUP;      // Pull Reset HIGH
+
+    // CRITICAL: The ILI9341 takes ~120ms to restart its
+    // internal oscillators after a reset pulse.
+    sleep_ms(150);
 }

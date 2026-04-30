@@ -68,57 +68,68 @@ char const *display_unit[6] = {
 
 int main()
 {
-    // overall initialization
+    // 1. Core Hardware
     stdio_init_all();
 
+    // GIVE USB TIME TO NEGOTIATE BEFORE STARTING INTERRUPTS
+    // This allows the PC to "see" the Pico before the timer starts firing
+    sleep_ms(1000);
+
     LEDs_Init();
+    Buttons_Init();
+    SPI_init();
+    LCD_DMA_Init();
+    LCDSetup();
 
-    // establish PuTTY connection
-    while (!stdio_usb_connected())
-    {
-        sleep_ms(10);
-    }
+    // ... timer setup ...
 
+    static struct repeating_timer timer; // Static ensures it persists in memory
+
+    // Start the 10ms background polling
+    add_repeating_timer_ms(-10, timer_callback_reset_check, NULL, &timer);
+
+    // controls how long a restart takes, but cannot be too short or any processes that take longer than the chosen amount of time will trigger a reset
+    watchdog_enable(3000, false);
+
+    // 3. Setup Logic (No blocking USB wait)
     rt.ParamPtr = NULL;
-
-    // clean slate
     ClearRxBuffer();
-    setBit(rt.Host, CharEchoFlag); // Enable the software echo we want to test
+    setBit(rt.Host, CharEchoFlag);
 
-    printf("\r\n--- Phase 1: Echo & Buffer Test ---\r\n");
-    printf("Testing: ServiceSerialHardware & processChar\r\n> ");
-    fflush(stdout);
+    current_screen = Screen_ControlsDisplay;
+    force_redraw = true;
 
+    // --- The Main Engine ---
     while (true)
     {
-        // LED heartbeat (testing only)
-        static uint32_t last_heartbeat = 0;
-        if (to_ms_since_boot(get_absolute_time()) - last_heartbeat > 500)
-        {
-            gpio_xor_mask(1 << LED1);
-            last_heartbeat = to_ms_since_boot(get_absolute_time());
-        }
+        // Vital: Feed the dog every loop
+        watchdog_update();
 
-        // capture and echo characters
+        // Serial/Command Pump
         ServiceSerialHardware();
         if (testBit(rt.Host, CharAvailableFlag))
-        {
             processChar();
-        }
-
         if (testBit(rt.Host, CmdAvailFlag))
         {
-            // test message
-            printf("\r\n[PARSER]: Analyzing buffer...\r\n");
-
-            // searches for command
             ParseRCI();
-
-            // print next line input
             printf("> ");
             fflush(stdout);
         }
 
-        tight_loop_contents();
+        // UI Logic
+        if (current_screen != InitializationDone)
+        {
+            if (force_redraw)
+            {
+                if (Screen_Options[current_screen])
+                    Screen_Options[current_screen]();
+                force_redraw = false;
+            }
+            WaitForInput();
+        }
+
+        // The "USB Breather"
+        // This ensures the loop doesn't run so fast it starves the USB stack
+        sleep_ms(5);
     }
 }
