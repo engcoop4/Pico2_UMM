@@ -1130,11 +1130,26 @@ void Put_CMD_as_chars(void)
 
 void Send_RCI_Param_Error(char *valid_msg)
 {
-    ErrorStatus = PARAM_ERROR;
+    ErrorStatus = 2; // PARAM_ERROR
 
-    // The Pico SDK handles the "Waiting for TX" logic internally.
-    // %s will pull from your buffers just like before.
-    printf("\r\n>~ERR BAD param %s; valid: %s\r\n\n", rt.HostRxBuff, valid_msg);
+    printf("\r\n>~ERR BAD param ");
+
+    // MANUALLY print the parameter characters
+    // We start at ParamPtr and stop when we hit a Control Character (like \r or \n)
+    if (rt.ParamPtr != NULL && *rt.ParamPtr >= 32) 
+    {
+        char *p = rt.ParamPtr;
+        while (*p >= 32 && *p != '\0') {
+            putchar(*p++);
+        }
+    } 
+    else 
+    {
+        printf("[EMPTY]");
+    }
+
+    printf("; valid: %s\r\n\n", valid_msg);
+    fflush(stdout);
 }
 
 uint16 PutStr(char *Str)
@@ -1367,18 +1382,28 @@ bool ParseRCI(void)
     CommStr = (Uchar *)&rt.HostRxBuff[0];
 
     // 2. Handle character processing (backspaces, echos, etc.)
-    if (rt.Host & CharAvailableFlag)
+    if (testBit(rt.Host, CharAvailableFlag))
         processChar();
 
     // 3. Early exit if no full command is ready
-    if ((rt.Host & CmdAvailFlag) == 0)
+    if (!testBit(rt.Host, CmdAvailFlag))
         return false;
+
+    // --- NEW: PARAMETER DETECTION ---
+    // Look for the '>' delimiter to separate CMD from PARAM
+    char *delimiter = strpbrk((char *)rt.HostRxBuff, "=>");
+    if (delimiter) {
+        rt.ParamPtr = delimiter + 1; // Point to the text after '>'
+    } else {
+        // If no '>', point to an empty string so printf doesn't crash
+        rt.ParamPtr = ""; 
+    }
 
     // 4. Pack the first 4 bytes into a uint32 for fast comparison
     cmd_word = Convert_4_ASCII_to_Uint32(CommStr);
 
     // Prepare for search
-    ErrorStatus = 1; // Assuming 1 corresponds to BAD_SIO_CMD_ERR
+    ErrorStatus = 1; // BAD_SIO_CMD_ERR
 
     const char p_Execution[] = ">~Execution";
     const char p_Unrecognized[] = ">~Unrecognized";
@@ -1387,16 +1412,15 @@ bool ParseRCI(void)
     int Num_RCI_commands = sizeof(rci) / sizeof(t_rci_commands);
     for (i = 0; i < (Num_RCI_commands); i++)
     {
-        // On RP2350, we cast the 4-char array to a uint32 pointer and dereference
         cmd_listed = rci[i].cmd_code;
 
         if (cmd_word == cmd_listed)
         {
             ErrorStatus = 0;      // NO_ERROR
-            rt.HostRxBuffPtr = 0; // Reset buffer pointer for next command
             CMD_index = i;        // Store which command we found
 
             // Execute the function pointer
+            // The buffer is still intact here, so cmd_baud can see rt.ParamPtr
             if (rci[i].f_ptr != NULL)
             {
                 (rci[i].f_ptr)();
@@ -1408,49 +1432,59 @@ bool ParseRCI(void)
     SendCrLf();
 
     // 6. Cleanup and Feedback
-    ClearRxBuffer();
-
-    if (ErrorStatus == 0) // NO_ERROR
+    // Now that the command is FINISHED executing, we clear the buffer
+    if (ErrorStatus != 0) 
     {
+        if (ErrorStatus == 1) // Unrecognized
+        {
+            printf("%s Cmd, Error Code = %d\r\n", p_Unrecognized, ErrorStatus);
+        }
+        else if (ErrorStatus != 2) // Execution Error (not Param Error)
+        {
+            printf("%s Cmd, Error Code = %d\r\n", p_Execution, ErrorStatus);
+        }
+        // Note: If ErrorStatus == 2 (PARAM_ERROR), the specific command function
+        // already printed the detailed error message, so we do nothing here.
+    }
+    else 
+    {
+        // NO_ERROR
         if ((rt.OperStatusWord & Command_Executing_eq1_Bit) == 0)
             SendMsgToPC(">~OK\r\n\n");
         else
             SendMsgToPC(">~Doing CMD");
     }
-    else
-    {
-        // 7. Simplified Error Reporting
-        // We replace the manual while(!(UCA0IFG...)) loops with standard printf
-        if (ErrorStatus == 1)
-        { // BAD_SIO_CMD_ERR
-            printf("%s Cmd, Error Code = %d\r\n", p_Unrecognized, ErrorStatus);
-        }
-        else if (ErrorStatus != 2)
-        { // Assuming 2 is PARAM_ERROR
-            printf("%s Cmd, Error Code = %d\r\n", p_Execution, ErrorStatus);
-        }
-    }
 
+    // FINAL STEP: Wipe the slate for the next command
+    ClearRxBuffer();
     wrk_str[0] = 0;
-    return true; // command was processed
+    
+    return true; 
 }
 
 void ServiceSerialHardware(void) {
     int c = getchar_timeout_us(0); 
     while (c != PICO_ERROR_TIMEOUT) {
-        // Store character in buffer
-        rt.HostRxBuff[rt.HostRxBuffPtr] = (char)c;
         
-        // Advance pointer with power-of-2 wrap
-        rt.HostRxBuffPtr = (rt.HostRxBuffPtr + 1) & (HOST_RX_BUFF_LEN - 1);
-        
-        // Set flag for processChar
-        setBit(rt.Host, CharAvailableFlag);
-
-        // Check for Enter
+        // Check for "Enter" keys (CR or LF)
         if (c == '\r' || c == '\n') {
+            // 1. Place a NULL terminator instead of the CR/LF
+            rt.HostRxBuff[rt.HostRxBuffPtr] = '\0'; 
+            
+            // 2. Set the flag so ParseRCI knows a command is ready
             setBit(rt.Host, CmdAvailFlag);
+            
+            // Note: We DON'T advance the pointer here because we want 
+            // the next command to start at index 0 after ClearRxBuffer runs.
+        } else {
+            // Store the actual character
+            rt.HostRxBuff[rt.HostRxBuffPtr] = (char)c;
+            
+            // Advance pointer with power-of-2 wrap
+            rt.HostRxBuffPtr = (rt.HostRxBuffPtr + 1) & (HOST_RX_BUFF_LEN - 1);
         }
+        
+        setBit(rt.Host, CharAvailableFlag);
         c = getchar_timeout_us(0);
     }
 }

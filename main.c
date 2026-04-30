@@ -68,18 +68,20 @@ char const *display_unit[6] = {
 
 int main()
 {
-    // 1. Hardware Init
+    // overall initialization
     stdio_init_all();
 
     LEDs_Init();
 
-    // 2. Wait for PuTTY
+    // establish PuTTY connection
     while (!stdio_usb_connected())
     {
         sleep_ms(10);
     }
 
-    // 3. Clear state
+    rt.ParamPtr = NULL;
+
+    // clean slate
     ClearRxBuffer();
     setBit(rt.Host, CharEchoFlag); // Enable the software echo we want to test
 
@@ -89,7 +91,7 @@ int main()
 
     while (true)
     {
-        // 1. Heartbeat
+        // LED heartbeat (testing only)
         static uint32_t last_heartbeat = 0;
         if (to_ms_since_boot(get_absolute_time()) - last_heartbeat > 500)
         {
@@ -97,23 +99,22 @@ int main()
             last_heartbeat = to_ms_since_boot(get_absolute_time());
         }
 
-        // 2. Capture and Echo
+        // capture and echo characters
         ServiceSerialHardware();
         if (testBit(rt.Host, CharAvailableFlag))
         {
             processChar();
         }
 
-        // 3. THE TEST: The Command Parser
         if (testBit(rt.Host, CmdAvailFlag))
         {
+            // test message
             printf("\r\n[PARSER]: Analyzing buffer...\r\n");
 
-            // This is the function that searches your rci[] table
+            // searches for command
             ParseRCI();
 
-            // After ParseRCI runs, it should have cleared the CmdAvailFlag
-            // and printed either the command output or an error.
+            // print next line input
             printf("> ");
             fflush(stdout);
         }

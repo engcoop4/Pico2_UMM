@@ -892,6 +892,7 @@ typedef struct
     volatile uint16_t EchoRxBuffPtr;
     char HostTxBuff[HOST_XMT_BUFF_LEN];
     char HostRxBuff[HOST_RX_BUFF_LEN];
+    char *ParamPtr;
 } RealTimeVars;
 
 // Variable Declarations
