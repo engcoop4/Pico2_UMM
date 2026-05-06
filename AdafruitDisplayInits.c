@@ -589,67 +589,24 @@ void LCD_DMA_Init()
     }
 }
 
-void LCD_Clear(uint32_t color)
-{
-    // 1. Prepare the window
+void LCD_Clear(uint32_t color) {
     setCursor(0, 0, 239, 319);
-
-    // Wait for setCursor's 0x2C command to actually leave the SPI wires
-    while (spi_is_busy(SPI_PORT))
-    {
-        tight_loop_contents();
-    }
-
-    // 2. Pre-calculate the 16-bit color using your logic
-    uint8_t hi, lo;
-    rgb888_to_rgb565(
-        (color >> 16) & 0xFF,
-        (color >> 8) & 0xFF,
-        color & 0xFF,
-        &hi, &lo);
-
-    // Create a 2-byte array for the DMA to "loop" over
-    // ILI9341 expects High Byte then Low Byte
-    uint8_t color_bytes[2] = {hi, lo};
-
-    // 3. Set D/C to Data mode
+    
+    // Ensure we are in Data mode
     LCD_PIN_HI_DATA;
     LCD_selectLCD();
 
-    // 4. Configure DMA
-    dma_channel_config c = dma_channel_get_default_config(display_dma_chan);
+    uint8_t hi, lo;
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
 
-    // Change to 8-bit to ensure the SPI FIFO accepts it correctly
-    channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
-    channel_config_set_dreq(&c, spi_get_index(SPI_PORT) ? DREQ_SPI1_TX : DREQ_SPI0_TX);
-
-    // We want the DMA to read hi, then lo, then hi, then lo...
-    // So we enable "Ring" wrapping on the read side (size of 2 bytes)
-    channel_config_set_read_increment(&c, true);
-    channel_config_set_ring(&c, false, 1); // 2^1 = 2 bytes wrap
-
-    dma_channel_configure(
-        display_dma_chan,
-        &c,
-        &spi_get_hw(SPI_PORT)->dr, // Destination
-        color_bytes,               // Source: Our 2-byte array
-        240 * 320 * 2,             // Count: 2 bytes per pixel, so * 2 is REQUIRED
-        true);
-
-    dma_channel_wait_for_finish_blocking(display_dma_chan);
-    LCD_deselectLCD();
-
-    /* //original code implemented from CCS
-    unsigned int ii, mm;
-    setCursor(0, 0, 239, 319);
-    for (ii = 0; ii < 240; ii++)
-    {
-        for (mm = 0; mm < 320; mm++)
-        {
-            format_color(color);
-        }
+    // Standard synchronous loop
+    for (uint32_t i = 0; i < (240 * 320); i++) {
+        // Use the standard blocking SPI write
+        spi_write_blocking(SPI_PORT, &hi, 1);
+        spi_write_blocking(SPI_PORT, &lo, 1);
     }
-    */
+
+    LCD_deselectLCD();
 }
 
 void print(int16_t x, int16_t y, const char* str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width) {

@@ -75,7 +75,7 @@ int main()
     LEDs_Init();
     Buttons_Init();
     SPI_init();
-    LCD_DMA_Init();
+    //LCD_DMA_Init();
     LCDSetup();
 
     // convert to its own function ?

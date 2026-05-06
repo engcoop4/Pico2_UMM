@@ -1,0 +1,7 @@
+.program screen_spi
+.side_set 1             ; 1 pin (GP4) is for the Clock
+
+public entry_point:
+    out pins, 1   side 0 ; Pull 1 bit from the "pile," put it on GP5, set Clock Low
+    jmp !osre, entry_point side 1 ; If there are more bits to send, loop and set Clock High
+

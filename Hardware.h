@@ -10,7 +10,7 @@
 // --- SPI Configuration ---
 // Replaces SMCLK_init and UCB1 configurations
 #define SPI_PORT spi1               // determines spi0 or spi1 (must be spi1 for Ethernet)
-#define SPI_BAUD_RATE (20 * 1000 * 1000)      // drop to 20MHz for testing (pretty fast)
+#define SPI_BAUD_RATE (20 * 1000 * 1000)      // possibly needs to be capped at same frequency of metering chip for signal integrity
 
 // --- Buttons ---
 // make sure to use corresponding GP number, not just pin number (e.g., GPIO 2 is pin 4 on the board)
