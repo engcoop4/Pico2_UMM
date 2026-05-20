@@ -7,11 +7,6 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 
-// --- SPI Configuration ---
-// Replaces SMCLK_init and UCB1 configurations
-#define SPI_PORT spi1               // determines spi0 or spi1 (must be spi1 for Ethernet)
-#define SPI_BAUD_RATE (20 * 1000 * 1000)      // possibly needs to be capped at same frequency of metering chip for signal integrity
-
 // --- Buttons ---
 // make sure to use corresponding GP number, not just pin number (e.g., GPIO 2 is pin 4 on the board)
 // need ONE switch set to GPIO 28 (ADC2)
@@ -20,10 +15,6 @@
 void Buttons_Init(void);
 
 // --- LCD Pin Mapping ---
-// Replaces P4_56_mode and P4_7_MODE logic
-#define PIN_SCK 10 // #define [name] [associated GPIO]
-#define PIN_MOSI 11
-#define PIN_MISO 12 // Not used by LCD but reserved for SPI1
 #define PIN_CS 13
 #define PIN_DC 14  // Replaces P4_7 (UMM board), Logic: 0 for cmd, 1 for data
 #define PIN_RST 15 // Replaces P3_7 (UMM board), Logic: 0 for RESETDOWN, and 1 for RESETUP

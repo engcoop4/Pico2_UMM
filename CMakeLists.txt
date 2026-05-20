@@ -46,6 +46,8 @@ add_executable(main
     Hardware.c
     )
 
+pico_generate_pio_header(main ${CMAKE_CURRENT_LIST_DIR}/screen_spi.pio)
+
 pico_set_program_name(main "main")
 pico_set_program_version(main "0.1")
 
@@ -56,6 +58,7 @@ pico_enable_stdio_usb(main 1)   # change to 1 to enable USB output, 0 to disable
 # Add the standard library to the build
 target_link_libraries(main
         pico_stdlib
+        pico_time
         hardware_spi
         hardware_uart
         hardware_adc
@@ -63,6 +66,8 @@ target_link_libraries(main
         hardware_irq
         hardware_timer
         hardware_dma
+        hardware_pio
+        hardware_sync
         )
 
 # Add the standard include files to the build
@@ -71,4 +76,3 @@ target_include_directories(main PRIVATE
 )
 
 pico_add_extra_outputs(main)
-

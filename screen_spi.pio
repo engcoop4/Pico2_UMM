@@ -1,7 +1,39 @@
 .program screen_spi
-.side_set 1             ; 1 pin (GP4) is for the Clock
+.side_set 1
 
+; SPI Mode 0 (CPOL=0, CPHA=0)
+; 2 cycles per bit total
 public entry_point:
-    out pins, 1   side 0 ; Pull 1 bit from the "pile," put it on GP5, set Clock Low
-    jmp !osre, entry_point side 1 ; If there are more bits to send, loop and set Clock High
+    out pins, 1  side 0 [1] ; Data transitions here, SCK is Low (1 cycle + 1 delay)
+    nop          side 1 [1] ; SCK goes High, Display samples here (1 cycle + 1 delay)
 
+% c-sdk {
+#include "hardware/gpio.h"
+#include "hardware/clocks.h"
+
+static inline void screen_spi_program_init(PIO pio, uint sm, uint offset, uint pin_sck, uint pin_mosi, float baud) {
+    pio_sm_config c = screen_spi_program_get_default_config(offset);
+
+    sm_config_set_out_pins(&c, pin_mosi, 1);
+    sm_config_set_sideset_pins(&c, pin_sck);
+
+    pio_gpio_init(pio, pin_mosi);
+    pio_gpio_init(pio, pin_sck);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_mosi, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_sck, 1, true);
+
+    // MSB first, Autopull enabled, 8-bit threshold
+    sm_config_set_out_shift(&c, false, true, 8);
+
+    // We use 2.0f because our assembly has two instructions with [1] delays
+    // (out...[1] = 2 cycles, nop...[1] = 2 cycles... Wait!) 
+    // Correction: 'out pins, 1 side 0 [1]' is 2 cycles. 'nop side 1 [1]' is 2 cycles.
+    // That is 4 cycles total per bit.
+    float div = (float)clock_get_hz(clk_sys) / (baud * 4.0f);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

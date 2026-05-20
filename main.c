@@ -8,6 +8,8 @@
 #include "hardware/irq.h"
 #include "hardware/timer.h"
 #include "hardware/watchdog.h"
+#include "hardware/pio.h"
+#include "screen_spi.pio.h"
 
 // Initialization/hardware
 #include "initSPI.h"
@@ -63,19 +65,29 @@ char const *display_unit[6] = {
     "W",
     "Hz"};
 
+// PIO Setup
+PIO pio_global = pio0;
+uint sm_global;
+uint offset;
+
 int main()
 {
     // core hardware
     stdio_init_all();
 
     // delay for USB
-    sleep_ms(500);
+    sleep_ms(100);
 
-    // all hardware initializations (convert to its own function ? -> avoid "losing" any of them like losing LCD_DMA_Init and bricking unit)
+    // 1. Setup PIO
+    offset = pio_add_program(pio_global, &screen_spi_program);
+    sm_global = pio_claim_unused_sm(pio_global, true);
+
+    screen_spi_program_init(pio_global, sm_global, offset, 4, 5, 32000000.0f); // 30 MHz works, 32 MHz seems to be the most stable, highest value
+
+    // all hardware initializations (convert to its own function ? -> avoid "losing" any of them like losing LCD_DMA_Init and bricking unit)    
     LEDs_Init();
     Buttons_Init();
-    SPI_init();
-    //LCD_DMA_Init();
+    LCDinit();
     LCDSetup();
 
     // convert to its own function ?
@@ -91,15 +103,18 @@ int main()
     watchdog_enable(3000, false);
 
     // command logic (gets its own function ?)
+    
     rt.ParamPtr = NULL;
     ClearRxBuffer();
     setBit(rt.Host, CharEchoFlag);
 
     current_screen = Screen_ControlsDisplay;
     force_redraw = true;
+    
 
     while (true)
     {
+        
         watchdog_update();
 
         // 1. HARDWARE SERVICE

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include "hardware/dma.h"
 #include "AdafruitDisplayInits.h"
+#include "hardware/pio.h"
+#include "screen_spi.pio.h"
 
 volatile int FLIP = 0;
 
@@ -12,6 +14,10 @@ extern const uint8_t console_font_12x16[];
 // functions like draw_pixel should NOT be DMA, this will actually take longer than letting the CPU handle it
 // functions like Rect (no fill) can go either way. opting to just use CPU so less code modifications required (subject to change)
 static int display_dma_chan = -1;
+
+extern PIO pio_global;
+extern uint sm_global;
+extern uint offset;
 
 void LCD_selectLCD()
 {
@@ -34,17 +40,28 @@ void LCD_delay(unsigned int ms)
 // This replaces your UCB1TXBUF and while(UCBUSY) logic
 void Lcd_Write_Bus(unsigned char d)
 {
-    // spi_write_blocking handles the "while busy" check internally
-    spi_write_blocking(SPI_PORT, &d, 1);
+    // 1. Push data to the PIO
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)d << 24);
+
+    // 2. Wait for the FIFO to be empty (the "Inbox" is clear)
+    while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global))
+        ;
+
+    // 3. Wait for the Program Counter (PC) to return to the entry point.
+    // This confirms the state machine has finished the 8-bit loop
+    // and is now stalling/waiting for new data.
+    while (pio_sm_get_pc(pio_global, sm_global) != (offset + screen_spi_offset_entry_point))
+        ;
 }
 
 // 4. Send Command
 void LCD_writeCommand(unsigned char cmd)
 {
-    LCD_PIN_LOW_CMD; // RS/DC = 0 (Macro from Hardware.h)
-    LCD_selectLCD(); // CS = 0
-    Lcd_Write_Bus(cmd);
-    LCD_deselectLCD(); // CS = 1
+    LCD_PIN_LOW_CMD; // D/C Low
+    LCD_selectLCD(); // CS Low
+    Lcd_Write_Bus(cmd); // Sends data
+    sleep_us(1); // <--- ADD THIS TEMPORARY HACK HERE
+    LCD_deselectLCD(); // CS High
 }
 
 // 5. Send Data
@@ -53,6 +70,7 @@ void LCD_writeData(unsigned char data)
     LCD_PIN_HI_DATA; // RS/DC = 1 (Macro from Hardware.h)
     LCD_selectLCD(); // CS = 0
     Lcd_Write_Bus(data);
+    sleep_us(1);
     LCD_deselectLCD(); // CS = 1
 }
 
@@ -216,28 +234,48 @@ void draw_pixel(unsigned int x, unsigned int y, uint32_t color)
 // Determines horizontal placement of pixel
 void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
+    // 1. Open a window that is exactly 1 pixel tall and 'l' pixels wide
+    setCursor(x, y, x + l - 1, y); 
 
-    unsigned int i;
-    LCD_writeCommand(0x02c);   // Write memory start
-    setCursor(x, y, x + l, y); // Set cursor to the horizontal line's starting position
+    // 2. Pre-convert color once
+    unsigned char r = (color >> 16) & 0xFF;
+    unsigned char g = (color >> 8) & 0xFF;
+    unsigned char b = color & 0xFF;
+    uint8_t high_byte, low_byte;
+    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
 
-    for (i = 1; i <= l; i++)
+    // 3. Fast stream
+    for (unsigned int i = 0; i < l; i++)
     {
-        format_color(color); // color each pixel along the horizontal line
+        // NOTE: If your setCursor doesn't automatically send 0x2C, 
+        // keep your LCD_writeCommand(0x2C) right here before the loop!
+        LCD_writeData(high_byte);
+        LCD_writeData(low_byte);
     }
 }
 
 // Determines vertical placement of pixel - Needs to be flipped
 void V_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
+    // 1. Establish the vertical bounding box once (1 pixel wide, 'l' pixels tall)
+    // A vertical line starting at y with length 'l' spans from y to (y + l - 1)
+    setCursor(x, y, x, y + l - 1); 
 
-    unsigned int i;
-    LCD_writeCommand(0x02c);   // Write memory start
-    setCursor(x, y, x, y + l); // Set cursor to the line's starting position
+    // 2. CRITICAL OPTIMIZATION: Extract loop-invariant math
+    // Convert from RGB888 to RGB565 exactly once before streaming data
+    unsigned char r = (color >> 16) & 0xFF;
+    unsigned char g = (color >> 8) & 0xFF;
+    unsigned char b = color & 0xFF;
+    
+    uint8_t high_byte, low_byte;
+    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
 
-    for (i = 1; i <= l; i++)
+    // 3. Fast streaming loop with zero math inside
+    for (unsigned int i = 0; i < l; i++)
     {
-        format_color(color); // Draw each pixel along the vertical line
+        // Bypass format_color overhead completely
+        LCD_writeData(high_byte);
+        LCD_writeData(low_byte);
     }
 }
 
@@ -253,11 +291,23 @@ void Rect(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint32
 // Fill a rectangle color (same color as border unless followed by Rect function) - Needs to be flipped
 void Rectf(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint32_t color)
 {
+    // 1. Open ONE window for the entire multi-line block
+    setCursor(x, y, x + w - 1, y + h - 1);
 
-    unsigned int i;
-    for (i = 0; i < h; i++)
+    // 2. Pre-convert color once
+    unsigned char r = (color >> 16) & 0xFF;
+    unsigned char g = (color >> 8) & 0xFF;
+    unsigned char b = color & 0xFF;
+    uint8_t high_byte, low_byte;
+    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
+
+    uint32_t total_pixels = (uint32_t)w * h;
+
+    // 3. Blistering fast uninterrupted pixel stream
+    for (uint32_t i = 0; i < total_pixels; i++)
     {
-        H_line(x, y + i, w, color); // Draw a horizontal line for each row in the rectangle
+        LCD_writeData(high_byte);
+        LCD_writeData(low_byte);
     }
 }
 
@@ -518,65 +568,49 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
               uint32_t color, uint32_t bg, uint8_t size_x,
               uint8_t size_y)
 {
-    //   CSDOWN;
-    int8_t i, j;
+    // 1. Calculate full block dimensions including scaling 
+    // (Note: includes the 13th column spacer directly in the window)
+    uint16_t total_width  = 13 * size_x; 
+    uint16_t total_height = 16 * size_y;
 
-    // Access the bitmap for the given character (sequentially in 1D array)
+    // 2. Set ONE bounding box window for the entire character block once
+    setCursor(x, y, x + total_width - 1, y + total_height - 1);
+
+    int8_t i, j, sx, sy;
+
+    // 3. Loop through font rows sequentially
     for (j = 0; j < 16; j++)
-    { // 16 rows per character
-        // Access the two bytes for this row (12 columns = 12 bits per row)
-        uint8_t byte1 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2]);     // First byte (8 bits)
-        uint8_t byte2 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2 + 1]); // Second byte (8 bits)
-
-        // Combine the two bytes to form a 16-bit value (use the first 12 bits)
-        uint16_t row = (byte1 << 8) | byte2; // Combine two 8-bit values into one 16-bit value
-
-        // Iterate through the 12 columns (12 bits per row)
-        for (i = 0; i < 12; i++)
-        {
-            if (row & (0x8000 >> i))
-            { // Check if the corresponding bit is set in the row
-                if (size_x == 1 && size_y == 1)
-                {
-                    setCursor(x + i, y + j, x + i, y + j);
-                    format_color(color); // Draw the foreground color (text color)
-                }
-                else
-                {
-                    Rectf(x + i * size_x, y + j * size_y, size_x, size_y, color); // Draw character with scaling
-                }
-            }
-            else if (bg != color)
-            { // Draw background only if it's different from the text color
-                if (size_x == 1 && size_y == 1)
-                {
-                    setCursor(x + i, y + j, x + i, y + j);
-                    format_color(bg); // Draw the background color
-                }
-                else
-                {
-                    Rectf(x + i * size_x, y + j * size_y, size_x, size_y, bg); // Draw background color with scaling
-                }
-            }
-        }
-    }
-
-    // Draw the last column for the background if necessary
-    if (bg != color)
     {
-        if (size_x == 1 && size_y == 1)
+        // Fetch and combine the two bytes for this row (12 active bits)
+        uint8_t byte1 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2]);
+        uint8_t byte2 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2 + 1]);
+        uint16_t row = (byte1 << 8) | byte2;
+
+        // Duplicate the row to match the vertical scaling multiplier (size_y)
+        for (sy = 0; sy < size_y; sy++)
         {
-            V_line(x + 12, y, 16, bg); // Draw background color for the last column
-        }
-        else
-        {
-            Rectf(x + 12 * size_x, y, size_x, 16 * size_y, bg); // Background for last column
+            // Iterate through the 12 active columns
+            for (i = 0; i < 12; i++)
+            {
+                // Check if the current bit is a foreground or background pixel
+                bool is_fg = (row & (0x8000 >> i));
+                uint32_t pixel_color = is_fg ? color : bg;
+
+                // Duplicate the pixel to match the horizontal scaling multiplier (size_x)
+                for (sx = 0; sx < size_x; sx++)
+                {
+                    format_color(pixel_color); // Push directly to PIO FIFO
+                }
+            }
+
+            // Push the 13th spacer column directly into the stream to fill out the window
+            for (sx = 0; sx < size_x; sx++)
+            {
+                format_color(bg);
+            }
         }
     }
-
-    //  CSUP;
 }
-
 
 // claim unused dma channel
 void LCD_DMA_Init()
@@ -589,49 +623,67 @@ void LCD_DMA_Init()
     }
 }
 
-void LCD_Clear(uint32_t color) {
+void LCD_Clear(uint32_t color)
+{
+    // 1. setCursor sends 0x2a, 0x2b, and 0x2c, handling its own CS tokens.
     setCursor(0, 0, 239, 319);
-    
-    // Ensure we are in Data mode
+
+    // 2. NOW safely pull CS low again for the raw data streaming phase
     LCD_PIN_HI_DATA;
     LCD_selectLCD();
+    sleep_us(5); // Small setup safety margin
 
     uint8_t hi, lo;
     rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
 
-    // Standard synchronous loop
-    for (uint32_t i = 0; i < (240 * 320); i++) {
-        // Use the standard blocking SPI write
-        spi_write_blocking(SPI_PORT, &hi, 1);
-        spi_write_blocking(SPI_PORT, &lo, 1);
+    uint32_t pio_hi = (uint32_t)hi << 24;
+    uint32_t pio_lo = (uint32_t)lo << 24;
+
+    // 3. Flood the PIO FIFO at raw speed
+    for (uint32_t i = 0; i < (240 * 320); i++)
+    {
+        pio_sm_put_blocking(pio_global, sm_global, pio_hi);
+        pio_sm_put_blocking(pio_global, sm_global, pio_lo);
     }
 
-    LCD_deselectLCD();
+    // 4. Wait for absolute completion before touching CS
+    // ... inside LCD_Clear after the massive for loop ...
+    while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global))
+        ;
+    while (pio_sm_get_pc(pio_global, sm_global) != (offset + screen_spi_offset_entry_point))
+        ;
+
+    LCD_deselectLCD();       // 2. Watch how CS reacts relative to this spike
 }
 
-void print(int16_t x, int16_t y, const char* str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width) {
+void print(int16_t x, int16_t y, const char *str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width)
+{
     int16_t cursorX = x;
     int16_t cursorY = y;
     uint8_t i = 0;
 
-    while (str[i]) {
+    while (str[i])
+    {
         // if(str[i] != '\0') removed for being redundant to while str[i]
         // search code for space, once space identified scan until the next space is encountered
-        if (str[i] == ' ') {
+        if (str[i] == ' ')
+        {
             int next_word_end = i + 1;
             // find the end of the next word
-            while (str[next_word_end] != ' ' && str[next_word_end] != '\0') {
-                next_word_end++;                // increment through string until next space is encountered (or string is terminated)
+            while (str[next_word_end] != ' ' && str[next_word_end] != '\0')
+            {
+                next_word_end++; // increment through string until next space is encountered (or string is terminated)
             }
 
-            int next_word_len = next_word_end - (i + 1);            // compensate offset
+            int next_word_len = next_word_end - (i + 1); // compensate offset
             int next_word_width = next_word_len * (size_x * FONT_WIDTH);
 
             //
-            if (cursorX + (size_x * FONT_WIDTH) + next_word_width > screen_width) {
+            if (cursorX + (size_x * FONT_WIDTH) + next_word_width > screen_width)
+            {
                 cursorX = x; // Reset to start of line
                 cursorY += size_y * FONT_HEIGHT;
-                i++; // skip the space itself so the new line doesn't start with a ' '
+                i++;      // skip the space itself so the new line doesn't start with a ' '
                 continue; // Jump to start of loop to draw the first char of the word
             }
         }
@@ -640,7 +692,8 @@ void print(int16_t x, int16_t y, const char* str, uint32_t color, uint32_t bg, u
         cursorX += size_x * FONT_WIDTH;
 
         // previous code implementation still included in case one single word extends the entire screen and needs to be split into two
-        if (cursorX + size_x * FONT_WIDTH > screen_width) {
+        if (cursorX + size_x * FONT_WIDTH > screen_width)
+        {
             cursorX = x;
             cursorY += size_y * FONT_HEIGHT;
         }
@@ -650,20 +703,24 @@ void print(int16_t x, int16_t y, const char* str, uint32_t color, uint32_t bg, u
 
 // modified code for centered text, only used in few positions and only used for text in very center of screen
 // may be eventually implemented in normal print function, but the "starting x" value messes with the centering of the text
-void print_centered(int16_t y, const char* str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width) {
+void print_centered(int16_t y, const char *str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width)
+{
     int16_t cursorY = y;
     int i = 0;
     uint16_t char_width = size_x * FONT_WIDTH;
 
-    while (str[i] != '\0') {
+    while (str[i] != '\0')
+    {
         int line_start = i;
         int line_end = i;
         int current_line_width = 0;
 
         // --- PASS 1: Look ahead to see what fits on this line ---
-        while (str[i] != '\0') {
+        while (str[i] != '\0')
+        {
             int word_start = i;
-            while (str[i] != ' ' && str[i] != '\0') i++; // Find end of word
+            while (str[i] != ' ' && str[i] != '\0')
+                i++; // Find end of word
             int word_end = i;
 
             int word_len = word_end - word_start;
@@ -672,11 +729,15 @@ void print_centered(int16_t y, const char* str, uint32_t color, uint32_t bg, uin
             // Check if word fits (including a space if not the first word)
             int space_extra = (current_line_width > 0) ? char_width : 0;
 
-            if (current_line_width + space_extra + word_pixel_width <= screen_width) {
+            if (current_line_width + space_extra + word_pixel_width <= screen_width)
+            {
                 current_line_width += space_extra + word_pixel_width;
                 line_end = i;
-                if (str[i] == ' ') i++; // Move past space for next word check
-            } else {
+                if (str[i] == ' ')
+                    i++; // Move past space for next word check
+            }
+            else
+            {
                 // Word doesn't fit, this line is done.
                 // Don't increment i; start next line with this word.
                 i = word_start;
@@ -688,7 +749,8 @@ void print_centered(int16_t y, const char* str, uint32_t color, uint32_t bg, uin
         int16_t startX = (screen_width - current_line_width) / 2;
         int16_t cursorX = startX;
         int j;
-        for (j = line_start; j < line_end; j++) {
+        for (j = line_start; j < line_end; j++)
+        {
             drawChar(cursorX, cursorY, str[j], color, bg, size_x, size_y);
             cursorX += char_width;
         }
@@ -697,48 +759,58 @@ void print_centered(int16_t y, const char* str, uint32_t color, uint32_t bg, uin
         cursorY += size_y * FONT_HEIGHT;
 
         // Skip the space at the end of the line if there is one
-        if (str[i] == ' ') i++;
+        if (str[i] == ' ')
+            i++;
     }
 }
 
 // x1 indicates offset from left side, x2 indicates rectangle width, str is string being used
 // FindCenterX and FindCenterY implemented as separate functions so that print can still have the coordinates manually chosen if needed
 // Font consideration implemented
-int FindCenterX(int16_t x1, int16_t x2, const char* str, uint8_t font_size) {
-        int last_space = 0;
-        int calc_x;
-        int i;
+int FindCenterX(int16_t x1, int16_t x2, const char *str, uint8_t font_size)
+{
+    int last_space = 0;
+    int calc_x;
+    int i;
 
-        // calculate total width produced by character string (10 for each character and 2 for buffer space between characters)
-        int total_width = (font_size * FONT_WIDTH * strlen(str)); //(10 * strlen(str)) + (2 * (strlen(str) - 1));
+    // calculate total width produced by character string (10 for each character and 2 for buffer space between characters)
+    int total_width = (font_size * FONT_WIDTH * strlen(str)); //(10 * strlen(str)) + (2 * (strlen(str) - 1));
 
-        // if this width is less than rectangle width (most often the case), perform equation calculation
-        if (total_width <= x2) {
-            calc_x = (x2 + (2 * x1) - total_width) * 0.5 - (1 * font_size);
-        }
-        // if total width is greater than rectangle width, find last location of space closest to edge
-        // error is coming from print wrap-around function placing character in top row
-        else {
-            for (i = 0; i < strlen(str); i++) {
-                if (str[i] == ' ') {
-                    int current_width = (10 * i) + (2 * (i - 1));
-                    if (current_width < x2) {
-                        last_space = i;
-                    } else {
-                        break;
-                    }
+    // if this width is less than rectangle width (most often the case), perform equation calculation
+    if (total_width <= x2)
+    {
+        calc_x = (x2 + (2 * x1) - total_width) * 0.5 - (1 * font_size);
+    }
+    // if total width is greater than rectangle width, find last location of space closest to edge
+    // error is coming from print wrap-around function placing character in top row
+    else
+    {
+        for (i = 0; i < strlen(str); i++)
+        {
+            if (str[i] == ' ')
+            {
+                int current_width = (10 * i) + (2 * (i - 1));
+                if (current_width < x2)
+                {
+                    last_space = i;
+                }
+                else
+                {
+                    break;
                 }
             }
-            int line1_width = (font_size * FONT_WIDTH * last_space); //(10 * last_space) + (2 * (last_space - 1));
-            calc_x = (x2 + (2 * x1) - line1_width) * 0.5;
         }
-        return calc_x;
+        int line1_width = (font_size * FONT_WIDTH * last_space); //(10 * last_space) + (2 * (last_space - 1));
+        calc_x = (x2 + (2 * x1) - line1_width) * 0.5;
+    }
+    return calc_x;
 }
 
 // y1 indicates offset from top, y2 indicates rectangle height
 // implemented to consider font size
 // if string goes off screen, calculates how many lines are required and adjusts offset accordingly
-int FindCenterY(int16_t y1, int16_t y2, const char* str, uint8_t font) {
+int FindCenterY(int16_t y1, int16_t y2, const char *str, uint8_t font)
+{
     int calc_y;
     int scale = strlen(str) * 0.0526315789473684;
 

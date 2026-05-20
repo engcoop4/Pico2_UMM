@@ -4,8 +4,6 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 
-#define SPI_PORT spi1
-
-void SPI_init(void);
+void LCDinit(void);
 
 #endif /* INITSPI_H_ */

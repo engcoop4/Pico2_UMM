@@ -1,16 +1,8 @@
 #include "initSPI.h"
 #include "Hardware.h"
 
-void SPI_init()
+void LCDinit()
 {
-    // initialize SPI hardware
-    // changing baud rate directly changes speed (16 MHz to match speed of msp430)
-    spi_init(SPI_PORT, SPI_BAUD_RATE);
-
-    gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
-    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
-    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
-
     // 3. Setup Chip Select
     gpio_init(PIN_CS);
     gpio_set_dir(PIN_CS, GPIO_OUT);
