@@ -87,5 +87,9 @@ uint16_t ReadTouchY(void);
 
 uint16_t ReadTouchY_Raw(void);
 
-uint8_t Display_Bounds_Check(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
+bool Display_Bounds_Check_Total(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
+
+bool Display_Bounds_Check_X(uint16_t, uint16_t, uint16_t);
+
+bool Display_Bounds_Check_Y(uint16_t, uint16_t, uint16_t);
 #endif /* TOUCHSCREENINIT_H_ */

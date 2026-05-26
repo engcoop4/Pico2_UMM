@@ -44,6 +44,13 @@
 /* P = PRESSED */
 /* HI = HIGH */
 /* L = LOW */
+/* RIGH = RIGHT */
+/* LEFT = LEFT */
+/* DEC = DECREASE */
+/* INC = INCREASE */
+/* TOP = TOP */
+/* BOT = BOTTOM */
+/* BOUND = BOUNDARY */
 /* -------- END KEY -------- */
 
 // General
@@ -296,6 +303,19 @@
 #define WFI_CHANSEL_ERASER_W 14
 #define WFI_CHANSEL_ERASER_H 20
 
+// NumberDisplays
+#define NUMD_THRESH_X_LEFT_BOUND 0
+#define NUMD_DEC_THRESH_X_W 71
+#define NUMD_TRI_THRESH_Y_TOP 100
+#define NUMD_TRI_THRESH_Y_H 120
+#define NUMD_INC_THRESH_X_LEFT 180
+#define NUMD_INC_THRESH_X_W 77
+#define NUMD_BUT_THRESH_Y_TOP 240
+#define NUMD_BUT_THRESH_Y_H 69
+#define NUMD_RET_THRESH_X_RIGH 106
+#define NUMD_ENT_THRESH_X_W 106
+#define NUMD_ENT_THRESH_X_LEFT 133
+
 extern int diff_display[8];
 extern int16_t saved_Ypos[7];
 extern uint8_t LCD_ch_source[7];
@@ -326,6 +346,7 @@ void OperatingMode(void);
 void NumberDisplays(void);
 void ChannelSel(void);
 void CursorFunction(void);
+void MeasureTouch(void);
 void ActiveMetering(void);
 
 #endif /* LCDPROCESSING_H_ */

@@ -151,7 +151,7 @@ void TouchInterrupt_Helper(void)
 
 void TouchToButtons(void)
 {
-// 1. Reset software flag
+    // 1. Reset software flag
     touch_triggered = 0;
 
     // 2. Park touch pins as High-Z Inputs
@@ -159,7 +159,7 @@ void TouchToButtons(void)
     gpio_set_dir(X_PLUS, GPIO_IN);
     gpio_set_dir(X_MINUS, GPIO_IN);
     gpio_set_dir(Y_PLUS, GPIO_IN);
-    
+
     // 3. Ensure Y- is an input with Pull-Up for the next touch
     gpio_set_dir(Y_MINUS, GPIO_IN);
     gpio_pull_up(Y_MINUS);
@@ -304,7 +304,7 @@ void WaitForTouchRelease(void)
     {
         avg_val = 0;
 
-        // Take 4 samples to average
+        // take 4 samples to average
         for (int i = 0; i < AVERAGE_SAMPLES_RELEASE; i++)
         {
             avg_val += adc_read();
@@ -312,7 +312,7 @@ void WaitForTouchRelease(void)
         }
         avg_val = avg_val / AVERAGE_SAMPLES_RELEASE;
 
-        // Check if the voltage returned to baseline (screen released)
+        // check if the voltage returned to baseline (screen released)
         if (avg_val > (touch_baseline - MARGIN))
         {
             count++;
@@ -325,20 +325,15 @@ void WaitForTouchRelease(void)
         busy_wait_us(100); // replaces __delay_cycles(1000)
     }
 
-    // 2. Re-establish physical Trap (Digital state)
     gpio_init(Y_PLUS);
     gpio_set_dir(Y_PLUS, GPIO_IN); // High-Z, waiting for pull-up
 
-    // 3. Settling window
     busy_wait_us(10);
-
-    // 4. Clear interrupt flags (RP2350 SDK handles this, but we ensure state is ready)
-    // The next time the interrupt is enabled, it won't see "stale" noise.
 
     // clear hardware pending interrupt bit
     gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
 
-    // Re-enable interrupt for next touch event
+    // re-enable interrupt for next touch event
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
 }
 
@@ -501,7 +496,17 @@ uint16_t ReadTouchY_Raw(void)
     return result;
 }
 
-uint8_t Display_Bounds_Check(uint16_t tx, uint16_t ty, uint16_t x_start, uint16_t y_start, uint16_t width, uint16_t height)
+bool Display_Bounds_Check_Total(uint16_t tx, uint16_t ty, uint16_t x_start, uint16_t y_start, uint16_t width, uint16_t height)
 {
     return (tx >= x_start && tx <= (x_start + width) && ty >= y_start && ty <= (y_start + height));
+}
+
+bool Display_Bounds_Check_X(uint16_t tx, uint16_t x_start, uint16_t width)
+{
+    return (tx >= x_start && tx <= (x_start + width));
+}
+
+bool Display_Bounds_Check_Y(uint16_t ty, uint16_t y_start, uint16_t height)
+{
+    return(ty >= y_start && ty <= (y_start + height));
 }

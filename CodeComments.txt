@@ -1,3 +1,8 @@
+20260520RW: SPI implementation completely overhauled to PI/O. PI/O stands for programmable input/output and is exclusive to the raspberry pi. This makes the code less transportable,
+so in the event of changing the LCD controller (to something not raspberry pi), a new SPI bus would be needed in order to minimize integration changes. However, designing this with the raspberry Pi
+in mind, this is the best course of action moving forward. The SPI bus would have contention if it was updating the LCD and also reading ADC data, so by driving the LCD using the PI/Os, this potential
+contention is eliminated.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 20260429RW: Begin testing of cmdProcessing functions after they have been integrated for R-Pi architecture. Basic testing completed, and the results show that the VS terminal is either
 incorrectly configured, or cannot be used for testing. It will allow messages to be sent (i.e. a banner such as: --- HARDWARE RAW RX TEST ---), but will not display characters sent via the keyboard. This
 was also tested using LEDs, but through the VS terminal, it seemed that the Pico never received any characters (Pico -> PC connection good, PC -> Pico connection bad). The same code was tested using PuTTY (session

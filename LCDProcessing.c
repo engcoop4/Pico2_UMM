@@ -337,15 +337,25 @@ void MENU_NumberOfDisplays(void)
         Rectf(NUMD_T_ENTER_X, NUMD_T_ENTER_Y, NUMD_T_BUT_W, NUMD_T_BUT_H, GREEN);
         print(FindCenterX(NUMD_T_ENTER_X, NUMD_T_BUT_W, buttons[1], FONT_1), FindCenterY(NUMD_T_ENTER_Y, NUMD_T_BUT_H, buttons[1], FONT_1), buttons[1], BLACK, GREEN, FONT_1, FONT_1, SCREEN_EDGE_X);
 
-        /*
-        // UP AND DOWN ARROWS (+1 UP, -1 DOWN)
-        Trianglef(119, 65, 99, 85, 139, 85, RED);
-        Trianglef(119, 244, 99, 224, 139, 224, RED);
-        */
-
         // LEFT AND RIGHT ARROWS (+1 RIGHT, -1 LEFT)
         Trianglef(NUMD_LEFT_TRI_X1, NUMD_LEFT_TRI_Y1, NUMD_LEFT_TRI_X2, NUMD_LEFT_TRI_Y2, NUMD_LEFT_TRI_X3, NUMD_LEFT_TRI_Y3, RED);
         Trianglef(NUMD_RIGHT_TRI_X1, NUMD_RIGHT_TRI_Y1, NUMD_RIGHT_TRI_X2, NUMD_RIGHT_TRI_Y2, NUMD_RIGHT_TRI_X3, NUMD_RIGHT_TRI_Y3, RED);
+
+        // bounds for touch screen detection
+
+        H_line(0, 100, 55, CYAN);
+        V_line(55, 100, 110, CYAN);
+        H_line(0, 210, 55, CYAN);
+
+        H_line(184, 100, 55, CYAN);
+        V_line(184, 100, 110, CYAN);
+        H_line(184, 210, 55, CYAN);
+
+        H_line(0, 250, 106, CYAN);
+        V_line(106, 250, 69, CYAN);
+
+        H_line(133, 250, 106, CYAN);
+        V_line(133, 250, 69, CYAN);
     }
     else
     {
@@ -627,7 +637,7 @@ void WaitForInput(void)
         ButtonPolling(); // Now only handles Up, Down, and Enter
     }
 
-    CursorFunction();
+    // CursorFunction();
 }
 
 // handles button polling of WaitForInput (allows for removal of button logic in main WaitForInput)
@@ -763,36 +773,34 @@ void OperatingMode(void)
 {
     if (touch_triggered)
     {
-        // Clear the ISR flag immediately so we don't loop on the same touch
-        touch_triggered = 0;
-
-        // Read fresh coordinates (this includes the settling delay internally)
-        X_Cord = ReadTouchX();
-        Y_Cord = ReadTouchY();
-
-        // switch from coordinate reading to button inputs
-        TouchToButtons();
+        // get coordinate readings
+        MeasureTouch();
 
         // Only process if the touch is valid (greater than 0) - the interrupt sets coord values to -1, so this wont execute if the readings dont process correctly
         if (X_Cord > 0 && Y_Cord > 0)
         {
+            // increment through the possible cursor options until the Display_Bounds_Check function returns true
+            // a true return here means that X_Cord and Y_Cord are both within the expected bounds of a specific box, so the cursor position
+            // gets set to the iteration value it is on, and then highlights and executes the code as if it is a button press
             for (int i = 0; i < 5; i++)
             {
                 // Logic: Start at 60Y, each box is 48px high, stepping by 52px
                 uint16_t row_top = 60 + (52 * i);
 
-                if (Display_Bounds_Check(X_Cord, Y_Cord, 6, row_top, 227, 48))
+                if (Display_Bounds_Check_Total(X_Cord, Y_Cord, 6, row_top, 227, 48))
                 {
                     cursor_position = i;
                     UpdateOperatingModeSelection();
 
                     // immediately trigger transition after highlighting box selection
                     enter_pressed = 1;
+                    touch_triggered = 0;
                     break;
                 }
             }
         }
 
+        WaitForTouchRelease();
         // Re-enable interrupt for next touch event
         gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
     }
@@ -841,7 +849,6 @@ void OperatingMode(void)
     {
         // clear flag
         return_pressed = 0;
-
         current_screen = Screen_TouchDecision;
         cali = 0;
         cursor_position = 0;
@@ -852,6 +859,45 @@ void OperatingMode(void)
 void NumberDisplays(void)
 {
     bool value_changed = false;
+
+    if (touch_triggered)
+    {
+        // get coordinate readings
+        MeasureTouch();
+
+        // won't trigger if touch is not detected, as values would be -1
+        if (X_Cord > 0 && Y_Cord > 0)
+        {
+            // can combine/group general sections via y coordinate, then hone in on section via x coordinate ?
+            // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
+            if (Display_Bounds_Check_Y(Y_Cord, NUMD_TRI_THRESH_Y_TOP, NUMD_TRI_THRESH_Y_H))
+            {
+                if (Display_Bounds_Check_X(X_Cord, NUMD_THRESH_X_LEFT_BOUND, NUMD_DEC_THRESH_X_W))
+                {
+                    b2_pressed = 1;
+                }
+                else if (Display_Bounds_Check_X(X_Cord, NUMD_INC_THRESH_X_LEFT, NUMD_INC_THRESH_X_W))
+                {
+                    b1_pressed = 1;
+                }
+            }
+
+            else if (Display_Bounds_Check_Y(Y_Cord, NUMD_BUT_THRESH_Y_TOP, NUMD_BUT_THRESH_Y_H))
+            {
+                if (Display_Bounds_Check_X(X_Cord, NUMD_THRESH_X_LEFT_BOUND, NUMD_RET_THRESH_X_RIGH))
+                {
+                    return_pressed = 1;
+                }
+                else if (Display_Bounds_Check_X(X_Cord, NUMD_ENT_THRESH_X_LEFT, NUMD_ENT_THRESH_X_W))
+                {
+                    enter_pressed = 1;
+                }
+            }
+        }
+        WaitForTouchRelease();
+        gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+    }
+
     int8_t change = b1_pressed - b2_pressed;
 
     if (change != 0)
@@ -1023,6 +1069,19 @@ void CursorFunction(void)
             }
         }
     }
+}
+
+void MeasureTouch(void)
+{
+    // clear touch trigger flag
+    touch_triggered = 0;
+
+    // read fresh coordinates
+    X_Cord = ReadTouchX();
+    Y_Cord = ReadTouchY();
+
+    // switch from coordinate reading to button inputs
+    TouchToButtons();
 }
 
 void ActiveMetering(void)

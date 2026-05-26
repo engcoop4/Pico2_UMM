@@ -100,7 +100,7 @@ int main()
     // controls how long a restart takes, but cannot be too short or any processes that take longer than the chosen amount of time will trigger a reset,
     // can prolly go shorter than 3 seconds tho (kinda long, 3 seconds hold + 3 seconds reset = 6 second cycle)
     // 1000 = 1 second, etc.
-    watchdog_enable(3000, false);
+    // watchdog_enable(3000, false);
 
     // command logic (gets its own function ?)
     
@@ -115,7 +115,7 @@ int main()
     while (true)
     {
         
-        watchdog_update();
+        // watchdog_update();
 
         // 1. HARDWARE SERVICE
         ServiceSerialHardware(); // Pulls bytes from USB/UART into your buffer
