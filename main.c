@@ -78,65 +78,40 @@ int main()
     // delay for USB
     sleep_ms(100);
 
-    // 1. Setup PIO
+    // setup PIO
     offset = pio_add_program(pio_global, &screen_spi_program);
     sm_global = pio_claim_unused_sm(pio_global, true);
 
     screen_spi_program_init(pio_global, sm_global, offset, 4, 5, 32000000.0f); // 30 MHz works, 32 MHz seems to be the most stable, highest value
 
-    // all hardware initializations (convert to its own function ? -> avoid "losing" any of them like losing LCD_DMA_Init and bricking unit)    
     LEDs_Init();
     Buttons_Init();
     LCDinit();
     LCDSetup();
-
-    // convert to its own function ?
-
-    static struct repeating_timer timer; // Static ensures it persists in memory
-
-    // background polls for RETURN inputs
-    add_repeating_timer_ms(-10, timer_callback_reset_check, NULL, &timer);
-
-    // controls how long a restart takes, but cannot be too short or any processes that take longer than the chosen amount of time will trigger a reset,
-    // can prolly go shorter than 3 seconds tho (kinda long, 3 seconds hold + 3 seconds reset = 6 second cycle)
-    // 1000 = 1 second, etc.
-    // watchdog_enable(3000, false);
-
-    // command logic (gets its own function ?)
-    
-    rt.ParamPtr = NULL;
-    ClearRxBuffer();
-    setBit(rt.Host, CharEchoFlag);
-
-    current_screen = Screen_ControlsDisplay;
-    force_redraw = true;
-    
+    Return_Timer_Setup();
+    Command_Processing_Setup();
 
     while (true)
     {
-        
-        // watchdog_update();
+        watchdog_update();
 
-        // 1. HARDWARE SERVICE
-        ServiceSerialHardware(); // Pulls bytes from USB/UART into your buffer
+        ServiceSerialHardware(); // Pulls bytes from USB/UART into your buffer, for command processing
 
-        // 2. COMMAND PROCESSING (The missing piece)
-        // Check if a character was received
+        // check if character was received, for command processing
         if (testBit(rt.Host, CharAvailableFlag))
         {
             processChar();
         }
 
-        // Check if a full command (like hitting 'Enter' in PuTTY) is ready
+        // check if full command (hitting ENTER key as trigger) is available, for command processing
         if (testBit(rt.Host, CmdAvailFlag))
         {
-            printf("\r\n[PARSER]: Analyzing buffer...\r\n");
             ParseRCI();
             printf("> ");
             fflush(stdout);
         }
 
-        // 3. UI STATIC DRAW
+        // draws general menus, not responsible for updating the screens, for UI
         if (force_redraw)
         {
             if (Screen_Options[current_screen])
@@ -144,8 +119,7 @@ int main()
             force_redraw = false;
         }
 
-        // 4. UI DYNAMIC LOGIC & INPUT
-        // This calls ActiveMetering or Menu logic
+        // responsible for updating the screens, will ultimately call ActiveMetering (the final display screen), for UI
         UIDispatcher();
 
         // This polls buttons and touch

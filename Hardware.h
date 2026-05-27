@@ -12,8 +12,6 @@
 // need ONE switch set to GPIO 28 (ADC2)
 #define SWLADDER 28 // SW1, GPIO 28, ADC2
 
-void Buttons_Init(void);
-
 // --- LCD Pin Mapping ---
 #define PIN_CS 13
 #define PIN_DC 14  // Replaces P4_7 (UMM board), Logic: 0 for cmd, 1 for data
@@ -31,8 +29,6 @@ void Buttons_Init(void);
 #define LED3 8
 #define LED4 9
 
-void LEDs_Init(void);
-
 #define RESETUP gpio_put(PIN_RST, 1)   // GPIO 13 high
 #define RESETDOWN gpio_put(PIN_RST, 0) // GPIO 13 low
 
@@ -47,6 +43,11 @@ void LEDs_Init(void);
 // --- Helper Macros ---
 // Replaces pgm_read_byte for compatibility
 #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
+
+void Buttons_Init(void);
+void LEDs_Init(void);
 bool timer_callback_reset_check(struct repeating_timer *t);
+void Return_Timer_Setup(void);
+void Command_Processing_Setup(void);
 
 #endif /* HARDWARE_H_ */

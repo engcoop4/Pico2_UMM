@@ -109,7 +109,7 @@ const int ycord[6] = {179, 179, 226, 226, 273, 273};
 int16_t saved_Ypos[7];
 int diff_display[8] = {31, 100, 90, 80, 66, 51, 42, 35};
 int additional_offset[7] = {79, 34, 9, 0, 0, 0, 0};
-uint32_t header_color[7] = {RED, GREEN, BLUE, MAGENTA, BROWN, SKY_BLUE, ORANGE};
+uint32_t header_color[7] = {DARK_BLUE, LIGHT_BLUE, ORANYEL, OFFWHITE, MID_BLUE, GREEN, LIGHT_GREY};
 char const *display_title[5] = {
     "1-Phase Power AC",
     "3-Phase Power AC",
@@ -124,9 +124,9 @@ const WFI_ScreenFunction Screen_Changes[9] = {
     [Screen_OperatingMode] = OperatingMode,
     [Screen_NumberDisplays] = NumberDisplays,
     [Screen_ChannelSelection] = ChannelSel,
-    [Index_PresetConfigs] = NULL,      // If you have logic for this
-    [Screen_DisplayChannels] = NULL,   // If you have logic for this
-    [Screen_Metering] = ActiveMetering // Now explicitly mapped to 8
+    [Index_PresetConfigs] = NULL,
+    [Screen_DisplayChannels] = NULL,
+    [Screen_Metering] = ActiveMetering // now explicitly mapped to 8
 };
 
 //------------------------------------------------------------------------------------------LCD GRAPHIC DISPLAY-----------------------------------------------------------------------------------------------------------
@@ -340,22 +340,6 @@ void MENU_NumberOfDisplays(void)
         // LEFT AND RIGHT ARROWS (+1 RIGHT, -1 LEFT)
         Trianglef(NUMD_LEFT_TRI_X1, NUMD_LEFT_TRI_Y1, NUMD_LEFT_TRI_X2, NUMD_LEFT_TRI_Y2, NUMD_LEFT_TRI_X3, NUMD_LEFT_TRI_Y3, RED);
         Trianglef(NUMD_RIGHT_TRI_X1, NUMD_RIGHT_TRI_Y1, NUMD_RIGHT_TRI_X2, NUMD_RIGHT_TRI_Y2, NUMD_RIGHT_TRI_X3, NUMD_RIGHT_TRI_Y3, RED);
-
-        // bounds for touch screen detection
-
-        H_line(0, 100, 55, CYAN);
-        V_line(55, 100, 110, CYAN);
-        H_line(0, 210, 55, CYAN);
-
-        H_line(184, 100, 55, CYAN);
-        V_line(184, 100, 110, CYAN);
-        H_line(184, 210, 55, CYAN);
-
-        H_line(0, 250, 106, CYAN);
-        V_line(106, 250, 69, CYAN);
-
-        H_line(133, 250, 106, CYAN);
-        V_line(133, 250, 69, CYAN);
     }
     else
     {
@@ -425,12 +409,16 @@ void MENU_ChannelSelection(void)
         Rectf(CHANSEL_TOUCH_ENTER_X, CHANSEL_TOUCH_ENTER_Y, CHANSEL_TOUCH_BUTTON_W, CHANSEL_TOUCH_BUTTON_H, GREEN);
         print(FindCenterX(CHANSEL_TOUCH_RETURN_X, CHANSEL_TOUCH_BUTTON_W, "RETURN", FONT_1), FindCenterY(CHANSEL_TOUCH_RETURN_Y, CHANSEL_TOUCH_BUTTON_H, "RETURN", FONT_1), "RETURN", BLACK, RED, FONT_1, FONT_1, SCREEN_EDGE_X);
         print(FindCenterX(CHANSEL_TOUCH_ENTER_X, CHANSEL_TOUCH_BUTTON_W, "ENTER", FONT_1), FindCenterY(CHANSEL_TOUCH_ENTER_Y, CHANSEL_TOUCH_BUTTON_H, "ENTER", FONT_1), "ENTER", BLACK, GREEN, FONT_1, FONT_1, SCREEN_EDGE_X);
-    }
-
-    if (touch_init)
-    {
         Trianglef(CHANSEL_LEFT_TRI_X1, CHANSEL_LEFT_TRI_Y1, CHANSEL_LEFT_TRI_X2, CHANSEL_LEFT_TRI_Y2, CHANSEL_LEFT_TRI_X3, CHANSEL_LEFT_TRI_Y3, RED);
         Trianglef(CHANSEL_RIGHT_TRI_X1, CHANSEL_RIGHT_TRI_Y1, CHANSEL_RIGHT_TRI_X2, CHANSEL_RIGHT_TRI_Y2, CHANSEL_RIGHT_TRI_X3, CHANSEL_RIGHT_TRI_Y3, RED);
+
+        H_line(0, 60, 35, CYAN);
+        V_line(35, 60, 58, CYAN);
+        H_line(0, 118, 35, CYAN);
+
+        H_line(204, 60, 35, CYAN);
+        V_line(204, 60, 58, CYAN);
+        H_line(204, 118, 35, CYAN);
     }
 
     UpdateChannelSelection();
@@ -636,7 +624,6 @@ void WaitForInput(void)
     {
         ButtonPolling(); // Now only handles Up, Down, and Enter
     }
-
     // CursorFunction();
 }
 
@@ -882,13 +869,13 @@ void NumberDisplays(void)
                 }
             }
 
-            else if (Display_Bounds_Check_Y(Y_Cord, NUMD_BUT_THRESH_Y_TOP, NUMD_BUT_THRESH_Y_H))
+            else if (Display_Bounds_Check_Y(Y_Cord, NUM_BUT_THRESH_Y_TOP, NUM_BUT_THRESH_Y_H))
             {
-                if (Display_Bounds_Check_X(X_Cord, NUMD_THRESH_X_LEFT_BOUND, NUMD_RET_THRESH_X_RIGH))
+                if (Display_Bounds_Check_X(X_Cord, NUMD_THRESH_X_LEFT_BOUND, NUM_RET_THRESH_X_RIGH))
                 {
                     return_pressed = 1;
                 }
-                else if (Display_Bounds_Check_X(X_Cord, NUMD_ENT_THRESH_X_LEFT, NUMD_ENT_THRESH_X_W))
+                else if (Display_Bounds_Check_X(X_Cord, NUM_ENT_THRESH_X_LEFT, NUM_ENT_THRESH_X_W))
                 {
                     enter_pressed = 1;
                 }
@@ -929,6 +916,44 @@ void NumberDisplays(void)
 void ChannelSel(void)
 {
     bool value_changed = false;
+
+    if (touch_triggered)
+    {
+        // get coordinate readings
+        MeasureTouch();
+
+        // won't trigger if touch is not detected, as values would be -1
+        if (X_Cord > 0 && Y_Cord > 0)
+        {
+            // can combine/group general sections via y coordinate, then hone in on section via x coordinate ?
+            // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
+            if (Display_Bounds_Check_Y(Y_Cord, NUMC_TRI_THRESH_Y_TOP, NUMC_TRI_THRESH_Y_H))
+            {
+                if (Display_Bounds_Check_X(X_Cord, NUMC_THRESH_X_LEFT_BOUND, NUMC_DEC_THRESH_X_W))
+                {
+                    b2_pressed = 1;
+                }
+                else if (Display_Bounds_Check_X(X_Cord, NUMC_INC_THRESH_X_LEFT, NUMC_INC_THRESH_X_W))
+                {
+                    b1_pressed = 1;
+                }
+            }
+
+            else if (Display_Bounds_Check_Y(Y_Cord, NUM_BUT_THRESH_Y_TOP, NUM_BUT_THRESH_Y_H))
+            {
+                if (Display_Bounds_Check_X(X_Cord, NUMC_THRESH_X_LEFT_BOUND, NUM_RET_THRESH_X_RIGH))
+                {
+                    return_pressed = 1;
+                }
+                else if (Display_Bounds_Check_X(X_Cord, NUM_ENT_THRESH_X_LEFT, NUM_ENT_THRESH_X_W))
+                {
+                    enter_pressed = 1;
+                }
+            }
+        }
+        WaitForTouchRelease();
+        gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+    }
     if (b1_pressed)
     {
         numberchannels++;
@@ -1089,6 +1114,23 @@ void ActiveMetering(void)
     // 1. DATA ACQUISITION & DISPLAY
     // Read your chip and update the LCD here
     // Run_Metering_Cycle();
+
+    /*
+    if (touch_triggered)
+    {
+        MeasureTouch();
+
+        if (X_Cord > 0 && Y_Cord > 0)
+        {
+            // can combine/group general sections via y coordinate, then hone in on section via x coordinate ?
+            // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
+            if (Display_Bounds_Check_Total(X_Cord, Y_Cord, 200, 0, 45, 30))
+            {
+                return_pressed = 1;
+            }
+        }
+    }
+        */
 
     // 2. CONTEXT-AWARE RETURN (Non-Blocking)
     if (timer_return_flag)

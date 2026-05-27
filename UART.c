@@ -16,11 +16,11 @@
 #include "pico/stdlib.h"
 
 // DEFINITION: Allocate the actual memory here
-uint32_t UART_BAUD = MODE_SMCLK_9600; 
+uint32_t UART_BAUD = MODE_SMCLK_9600;
 
 void initUART()
 {
-    // 1. uart_init RETURNS the actual baud rate achieved. 
+    // 1. uart_init RETURNS the actual baud rate achieved.
     // This removes the need for a separate "get" function call.
     UART_BAUD = uart_init(UART_ID, UART_BAUD);
 
@@ -33,7 +33,7 @@ void initUART()
 
     // 4. Enable FIFOs (32-byte deep buffers)
     uart_set_fifo_enabled(UART_ID, true);
-    
+
     // 5. Final check (Optional)
     // You can remove the line: UART_BAUD = uart_get_baudrate(UART_ID);
     // Because step 1 already handled it.

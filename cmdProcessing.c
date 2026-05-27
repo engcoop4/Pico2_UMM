@@ -499,10 +499,11 @@ void floatToString(float num, char *buffer, int decimalPlaces)
 }
 
 //------------------------------------------------------------------------------------------Command Processing-----------------------------------------------------------------------------------------------------------
-void Print_Help(void) {
-    // We use 'static const' so this string stays in Flash memory, 
+void Print_Help(void)
+{
+    // We use 'static const' so this string stays in Flash memory,
     // saving precious RAM on the RP2350.
-    static const char *test_menu = 
+    static const char *test_menu =
         "\r\nvers Get FW Version\r\n"
         "menu Call Menu\r\n"
         "init Re-initialize\r\n"
@@ -521,7 +522,7 @@ void Print_Help(void) {
     // On the RP2350, we replace the manual while-loop and register checks
     // with a single call to printf. The SDK handles the buffering for us.
     printf("%s", test_menu);
-    
+
     // Optional: Ensure the buffer is pushed out to the USB immediately
     fflush(stdout);
 }
@@ -530,19 +531,20 @@ void Print_FW_Version(void)
 {
     // On RP2350, we skip the intermediate tmpBuf[256] entirely.
     // This saves 256 bytes of stack space, which is safer for deep function calls.
-    
-    // We use printf directly. The Pico SDK handles the "Wait for TX" 
+
+    // We use printf directly. The Pico SDK handles the "Wait for TX"
     // and character streaming automatically.
-    printf("\r\nBattery Monitor SW %s Ver %3.1f @ %s\r\n", 
-            FW_PartNumber, 
-            (double)FW_ver_float, 
-            FW_Date);
+    printf("\r\nBattery Monitor SW %s Ver %3.1f @ %s\r\n",
+           FW_PartNumber,
+           (double)FW_ver_float,
+           FW_Date);
 
     // Ensure the message hits the terminal immediately
     fflush(stdout);
 }
 
-void Print_menu(void) {
+void Print_menu(void)
+{
     // We use 'static const' to keep the string in Flash memory.
     // Note: I swapped \n\r to \r\n to match standard modern terminal behavior,
     // which prevents the "staircase" effect in many serial monitors.
@@ -555,19 +557,21 @@ void Print_menu(void) {
     fflush(stdout);
 }
 
-void Print_init(void) {
+void Print_init(void)
+{
     // Kept as 'static const' to save RAM by keeping the string in Flash memory.
     static const char *init_menu = "\r\nInitialization Selection:\r\n";
 
     // Direct replacement for the while loop and UCA0TXBUF logic.
     printf("%s", init_menu);
 
-    // Critical here: ensures the message is visible BEFORE 
+    // Critical here: ensures the message is visible BEFORE
     // the system potentially hangs or delays during initialization.
     fflush(stdout);
 }
 
-void Print_dflt(void) {
+void Print_dflt(void)
+{
     // Keep the string in Flash memory to save RAM.
     static const char *test_menu = "\r\ndflt command selected...\r\n";
 
@@ -578,90 +582,123 @@ void Print_dflt(void) {
     fflush(stdout);
 }
 
-void Print_save(void) {
+void Print_save(void)
+{
     // Standardizing to \r\n for modern terminal compatibility
     static const char *test_menu = "\r\nsave command selected...\r\n";
 
     // Direct replacement for the MSP430 hardware loop
     printf("%s", test_menu);
 
-    // CRITICAL: Push this message out NOW. 
-    // If your following 'save' logic pauses the CPU to write to Flash, 
+    // CRITICAL: Push this message out NOW.
+    // If your following 'save' logic pauses the CPU to write to Flash,
     // the user needs to see this message first.
     fflush(stdout);
 }
 
-void SetGetPhase(void) {
+void SetGetPhase(void)
+{
     // 1. Pointer Setup: CommStr is your shared buffer pointer
-    Uchar* temp_inp_str = CommStr;
-    
+    Uchar *temp_inp_str = CommStr;
+
     // 2. Extract the Parameter (the text after "phas>")
     // We look 5 bytes in (4 for 'phas' + 1 for '>')
     uint32 param = Convert_4_ASCII_to_Uint32(&temp_inp_str[CMD_LEN + 1]);
 
     // 3. SET Logic: If the user typed 'phas>'
-    if (temp_inp_str[CMD_LEN] == '>') {
-        
+    if (temp_inp_str[CMD_LEN] == '>')
+    {
+
         // Match "3-ph" (Packed as a 32-bit word)
-        if (param == 0x68702D33) { // '3', '-', 'p', 'h' packed
+        if (param == 0x68702D33)
+        { // '3', '-', 'p', 'h' packed
             setBit(SysData.NV_UI.SavedStatusWord, SinglePhase_eq0_3ph_eq1_Bit);
             // On RP2350, we use your new Send_comment for feedback
             Send_comment("Set to 3-Phase");
         }
         // Match "1-ph"
-        else if (param == 0x68702D31) { // '1', '-', 'p', 'h' packed
+        else if (param == 0x68702D31)
+        { // '1', '-', 'p', 'h' packed
             clearBit(SysData.NV_UI.SavedStatusWord, SinglePhase_eq0_3ph_eq1_Bit);
             Send_comment("Set to 1-Phase");
         }
-        else {
+        else
+        {
             Send_RCI_Param_Error("1-ph or 3-ph");
         }
     }
     // 4. GET Logic: If the user just typed 'phas'
-    else {
+    else
+    {
         Put_CMD_as_chars(); // Prints "phas"
-        
-        if (testBit(SysData.NV_UI.SavedStatusWord, SinglePhase_eq0_3ph_eq1_Bit)) {
+
+        if (testBit(SysData.NV_UI.SavedStatusWord, SinglePhase_eq0_3ph_eq1_Bit))
+        {
             PutStr(">3-ph");
-        } else {
+        }
+        else
+        {
             PutStr(">1-ph");
         }
-        
+
         Send_verbose_comment("Phase configuration status");
     }
 }
 
-void testLCD(void) {
-    Uchar* temp_inp_str = CommStr;
+void testLCD(void)
+{
+    Uchar *temp_inp_str = CommStr;
     // We keep this param extraction for the 'dflt' check
     uint32 param = Convert_4_ASCII_to_Uint32(&temp_inp_str[CMD_LEN + 1]);
 
-    if (temp_inp_str[CMD_LEN] == '>') 
+    if (temp_inp_str[CMD_LEN] == '>')
     {
         // Path A: The specific "test>a#d$" assignment
-        if (temp_inp_str[CMD_LEN + 1] == 'a') 
+        if (temp_inp_str[CMD_LEN + 1] == 'a')
         {
             // --- KEEPING YOUR EXACT SWITCH LOGIC ---
-            switch (temp_inp_str[CMD_LEN + 2]) 
+            switch (temp_inp_str[CMD_LEN + 2])
             {
-                case '0': SD24_index = 0; break;
-                case '1': SD24_index = 1; break;
-                case '2': SD24_index = 2; break;
-                case '3': SD24_index = 3; break;
-                case '4': SD24_index = 4; break;
-                case '5': SD24_index = 5; break;
-                case '6': SD24_index = 6; break;
-                default: goto format_error;
+            case '0':
+                SD24_index = 0;
+                break;
+            case '1':
+                SD24_index = 1;
+                break;
+            case '2':
+                SD24_index = 2;
+                break;
+            case '3':
+                SD24_index = 3;
+                break;
+            case '4':
+                SD24_index = 4;
+                break;
+            case '5':
+                SD24_index = 5;
+                break;
+            case '6':
+                SD24_index = 6;
+                break;
+            default:
+                goto format_error;
             }
 
-            if (temp_inp_str[CMD_LEN + 3] == 'd') 
+            if (temp_inp_str[CMD_LEN + 3] == 'd')
             {
-                switch (temp_inp_str[CMD_LEN + 4]) 
+                switch (temp_inp_str[CMD_LEN + 4])
                 {
-                    case '0': LCD_CH_index = 0; break;
-                    case '1': LCD_CH_index = 1; break;
-                    case '2': LCD_CH_index = 2; break;
-                    default: goto format_error;
+                case '0':
+                    LCD_CH_index = 0;
+                    break;
+                case '1':
+                    LCD_CH_index = 1;
+                    break;
+                case '2':
+                    LCD_CH_index = 2;
+                    break;
+                default:
+                    goto format_error;
                 }
             }
             // --- END OF SWITCH LOGIC ---
@@ -679,24 +716,26 @@ void testLCD(void) {
             ResetLCDMapping();
             Send_comment("LCD Mapping Reset to Default");
         }
-        else 
+        else
         {
             goto format_error;
         }
-    } 
-    else 
+    }
+    else
     {
-        format_error:
+    format_error:
         // Use your existing PutStr wrapper which is already ported to the Pico SDK
         PutStr("\r\nFormat Error. Please enter in form test>a#d$ where # is [0..6] and $ is [0..2]\r\n");
     }
 }
 
-void Acquire_ADC_raw_counts() {
+void Acquire_ADC_raw_counts()
+{
     // We no longer need char tmpBuf[64] because we print directly to the stream.
-    
+
     int i;
-    for (i = 0; i < 7; i++) {
+    for (i = 0; i < 7; i++)
+    {
         // The RP2350 FPU handles this multiplication natively.
         // I've kept your exact precision constant.
         float voltage = (0.0000001788139343261719f) * ((float)(ADCbuffer[i]));
@@ -705,13 +744,14 @@ void Acquire_ADC_raw_counts() {
         // We use %ld for ADCbuffer assuming it's a long (int32_t) on the R-Pi.
         printf("\r\nSD24 CH%d read: %ld -> %f V\r\n", i, (long)ADCbuffer[i], (double)voltage);
     }
-    
+
     // Ensure all 7 channels are sent to the terminal before moving on.
     fflush(stdout);
 }
 
-void SetGetBaudRate() {
-    Uchar* temp_inp_str = CommStr;
+void SetGetBaudRate()
+{
+    Uchar *temp_inp_str = CommStr;
     // Extract first 4 chars after "baud=" for identification
     uint32 param = Convert_4_ASCII_to_Uint32(&temp_inp_str[CMD_LEN + 1]);
 
@@ -719,32 +759,38 @@ void SetGetBaudRate() {
     // This removes the "implicitly declared" error.
     uint32 current_baud = UART_BAUD;
 
-    if (temp_inp_str[CMD_LEN] == '=') 
+    if (temp_inp_str[CMD_LEN] == '=')
     {
-        if (Is_Numeric(&temp_inp_str[CMD_LEN + 1]) == 1) 
+        if (Is_Numeric(&temp_inp_str[CMD_LEN + 1]) == 1)
         {
             uint32 target_baud = 0;
 
-            if (param == 0x32353131) { // "1152"
-                if (current_baud == 115200) {
+            if (param == 0x32353131)
+            { // "1152"
+                if (current_baud == 115200)
+                {
                     PutStr("\r\nBaud Rate Already Selected\r\n");
                     return;
                 }
                 target_baud = 115200;
             }
-            else if (param == 0x30303639) { // "9600"
-                if (current_baud == 9600) {
+            else if (param == 0x30303639)
+            { // "9600"
+                if (current_baud == 9600)
+                {
                     PutStr("\r\nBaud Rate Already Selected\r\n");
                     return;
                 }
                 target_baud = 9600;
             }
-            else goto format_error;
+            else
+                goto format_error;
 
             printf("\r\n%lu baud rate selected\r\n"
                    "Re-launch terminal with new baud rate.\r\n"
-                   "Press Enter Key with new baud rate to Resume\r\n\n", (unsigned long)target_baud);
-            
+                   "Press Enter Key with new baud rate to Resume\r\n\n",
+                   (unsigned long)target_baud);
+
             fflush(stdout);
             uart_tx_wait_blocking(UART_ID); // Using your UART_ID define
 
@@ -753,31 +799,34 @@ void SetGetBaudRate() {
             UART_BAUD = uart_set_baudrate(UART_ID, target_baud);
 
             // Acknowledge the switch
-            (void)getchar(); 
+            (void)getchar();
         }
-        else goto format_error;
+        else
+            goto format_error;
     }
-    else if (temp_inp_str[CMD_LEN] == '\0') 
+    else if (temp_inp_str[CMD_LEN] == '\0')
     {
         // Use current_baud (which we pulled from UART_BAUD at the start)
         printf("\r\nCurrent Baud Rate: %lu\r\n", (unsigned long)current_baud);
         fflush(stdout);
     }
-    else 
+    else
     {
-        format_error:
+    format_error:
         Send_RCI_Param_Error("115200, 9600");
     }
 }
 
-void SetGetVoltageRange(void) {
-    Uchar* temp_Inp_str = CommStr;
+void SetGetVoltageRange(void)
+{
+    Uchar *temp_Inp_str = CommStr;
     uint32 param = Convert_4_ASCII_to_Uint32(&temp_Inp_str[CMD_LEN + 1]);
     uint8 index;
 
-    if (temp_Inp_str[CMD_LEN] == '>') {
+    if (temp_Inp_str[CMD_LEN] == '>')
+    {
         // Hex literals updated for RP2350 32-bit packing (Little Endian)
-        if (param == 0x76343230)      // "024v" packed
+        if (param == 0x76343230) // "024v" packed
             SysData.NV_UI.unit_type = UNIT_24V;
         else if (param == 0x76383430) // "048v" packed
             SysData.NV_UI.unit_type = UNIT_48V;
@@ -785,7 +834,7 @@ void SetGetVoltageRange(void) {
             SysData.NV_UI.unit_type = UNIT_125V;
         else if (param == 0x76303532) // "250v" packed
             SysData.NV_UI.unit_type = UNIT_250V;
-        else 
+        else
             Send_RCI_Param_Error("024v 048v 125v 250v only");
     }
     /*
@@ -803,7 +852,8 @@ void SetGetVoltageRange(void) {
     SysData.NV_UI.plus_gf_threshold_V_f = SysData.NV_UI.minus_gf_threshold_V_f;     // IK20240206 copy plus threshold from minus when changing unit type from menu
     SaveToEE(SysData.NV_UI.plus_gf_threshold_V_f);      // Store_Parameter(PLUS_GF, SysData.NV_UI.plus_gf_threshold_V_f);               // store new value
     */
-    else {
+    else
+    {
         // RP2350 Upgrade: Replace sprintf buffer and manual UART loop with direct printf
         printf("\r\nunit>%03dv\r\n", (int)SysData.NV_UI.unit_type);
         fflush(stdout);
@@ -812,41 +862,49 @@ void SetGetVoltageRange(void) {
     }
 }
 
-void Echo_Enab_Disab(void) {
+void Echo_Enab_Disab(void)
+{
     // Convert_4_ASCII_to_Uint32 reads 4 chars starting at '>'
     uint32 param = Convert_4_ASCII_to_Uint32(&CommStr[CMD_LEN]);
 
     // ">ena" (first 4 of ">enable")
     // Packed as: 0x616E653E ('a' 'n' 'e' '>')
-    if (param == 0x616E653E) {
+    if (param == 0x616E653E)
+    {
         setBit(rt.Host, CharEchoFlag);
         clearBit(rt.Host, CmdVerboseResponse);
     }
     // ">ver" (first 4 of ">verbose")
     // Packed as: 0x7265763E ('r' 'e' 'v' '>')
-    else if (param == 0x7265763E) {
+    else if (param == 0x7265763E)
+    {
         setBit(rt.Host, (CharEchoFlag | CmdVerboseResponse));
     }
     // ">dis" (first 4 of ">disable")
     // Packed as: 0x7369643E ('s' 'i' 'd' '>')
-    else if (param == 0x7369643E) {
+    else if (param == 0x7369643E)
+    {
         clearBit(rt.Host, (CharEchoFlag | CmdVerboseResponse));
     }
-    else {
+    else
+    {
         // "Get" Logic: Display current status
-        Put_CMD_as_chars(); 
+        Put_CMD_as_chars();
         PutChar('>');
 
-        if (rt.Host & CmdVerboseResponse) {
+        if (rt.Host & CmdVerboseResponse)
+        {
             printf("Verbose");
         }
-        else if (rt.Host & CharEchoFlag) {
+        else if (rt.Host & CharEchoFlag)
+        {
             printf("Enabled");
         }
-        else {
+        else
+        {
             printf("Disabled");
         }
-        
+
         // Ensure the data is pushed to the terminal
         fflush(stdout);
     }
@@ -866,10 +924,10 @@ void adc0_acquire(void)
     fflush(stdout);
 }
 
-void SetGet_param(int float_offset, float minValue, float maxValue, float* Qf_var_ptr, char* verb_msg)
+void SetGet_param(int float_offset, float minValue, float maxValue, float *Qf_var_ptr, char *verb_msg)
 {
     float temp_float;
-    char* temp_Inp_str = CommStr; // pointer to RxBuff
+    char *temp_Inp_str = CommStr; // pointer to RxBuff
     // Resolve the string pointer based on command length and your offset mask
     int str_ptr = CMD_LEN + (float_offset & (SHOW_LONG - 1));
 
@@ -877,7 +935,8 @@ void SetGet_param(int float_offset, float minValue, float maxValue, float* Qf_va
     {
         str_ptr++;
         // Use your existing Is_Numeric validation
-        if (Is_Numeric(&temp_Inp_str[str_ptr]) != true) goto par_error;
+        if (Is_Numeric(&temp_Inp_str[str_ptr]) != true)
+            goto par_error;
 
         // RP2350 uses the standard C library atof, which is fast on Cortex-M33
         temp_float = (float)atof(&temp_Inp_str[str_ptr]);
@@ -887,9 +946,12 @@ void SetGet_param(int float_offset, float minValue, float maxValue, float* Qf_va
             goto par_error;
 
         // Logic check: determine if we save as a precise float or a long integer
-        if (float_offset < SHOW_LONG) {
-            *Qf_var_ptr = temp_float;            // save as float
-        } else {
+        if (float_offset < SHOW_LONG)
+        {
+            *Qf_var_ptr = temp_float; // save as float
+        }
+        else
+        {
             *Qf_var_ptr = (float)((long)(temp_float)); // save as 'long' casted back to float
         }
 
@@ -904,10 +966,12 @@ void SetGet_param(int float_offset, float minValue, float maxValue, float* Qf_va
         if (float_offset < SHOW_LONG)
         {
             // Dynamic formatting based on value magnitude for better precision display
-            const char* frmt = "=%3.3f";
-            if (temp_float < 10.0f)      frmt = "=%1.7f";
-            else if (temp_float < 100.0f) frmt = "=%2.5f";
-            
+            const char *frmt = "=%3.3f";
+            if (temp_float < 10.0f)
+                frmt = "=%1.7f";
+            else if (temp_float < 100.0f)
+                frmt = "=%2.5f";
+
             printf(frmt, (double)temp_float);
         }
         else
@@ -928,16 +992,18 @@ par_error:
     fflush(stdout);
 }
 
-void SetGetCalParam(void) {
-    Uchar* temp_Inp_str = CommStr;
+void SetGetCalParam(void)
+{
+    Uchar *temp_Inp_str = CommStr;
     CalPtr CalStructurePtr;
     char Cal_Name[40];
 
     // RP2350 handles these index conversions very quickly
     int index1 = ASCIItoHexChar(temp_Inp_str[CMD_LEN]);
-    int index2 = ASCIItoHexChar(temp_Inp_str[CMD_LEN + 1]); 
+    int index2 = ASCIItoHexChar(temp_Inp_str[CMD_LEN + 1]);
 
-    if ((index1 < 0) || (index1 > 7)) {
+    if ((index1 < 0) || (index1 > 7))
+    {
         goto error_param;
     }
 
@@ -946,11 +1012,11 @@ void SetGetCalParam(void) {
 
     // Pointer math: SysData.BatteryVolts is the start of an array of calibration structures
     CalStructurePtr = (CalPtr)&SysData.BatteryVolts;
-    CalStructurePtr += index1; 
+    CalStructurePtr += index1;
 
     // RCI_message is likely a global buffer; we use snprintf for safety on ARM
     // to prevent buffer overflows if Cal_Name is unexpectedly long.
-    
+
     if (index2 == X1_low_point) // == 1
     {
         snprintf(RCI_message, sizeof(RCI_message), "Point %c, X coordinate, 0..32767, %s", '1', Cal_Name);
@@ -973,7 +1039,7 @@ void SetGetCalParam(void) {
     }
     else
     {
-        error_param:
+    error_param:
         // Use a safe copy for the error message
         CopyConstString("arg *# where # is: 0-Y1,1-X1,2-Y2,3-X2", Cal_Name);
         Send_RCI_Param_Error(Cal_Name);
@@ -996,29 +1062,31 @@ void SetGetButtonStateMan(void)
     else
     {
         // 1. Select the ADC channel for your ladder (e.g., ADC0 is GPIO 26)
-        adc_select_input(0); 
+        adc_select_input(0);
         uint16_t raw_adc = adc_read();
 
         // 2. Determine button states based on voltage windows
         // Assumes 12-bit ADC (0-4095). Adjust these thresholds based on your resistor values!
-        int stateB1man = (raw_adc > 500 && raw_adc < 1500); 
+        int stateB1man = (raw_adc > 500 && raw_adc < 1500);
         int stateB2man = (raw_adc > 1500 && raw_adc < 2500);
         int stateB3man = (raw_adc > 2500 && raw_adc < 3500);
-        int stateB4man = (raw_adc > 3500); 
+        int stateB4man = (raw_adc > 3500);
 
-        printf("\r\nADC Raw: %u | B1=%d B2=%d B3=%d B4=%d\r\n", 
-                raw_adc, stateB1man, stateB2man, stateB3man, stateB4man);
+        printf("\r\nADC Raw: %u | B1=%d B2=%d B3=%d B4=%d\r\n",
+               raw_adc, stateB1man, stateB2man, stateB3man, stateB4man);
         fflush(stdout);
     }
 }
 
-void UpdateDutyChannel() {
+void UpdateDutyChannel()
+{
     // CommStr[CMD_LEN] is likely '>', so [CMD_LEN + 1] is the channel digit
     char param = CommStr[CMD_LEN + 1];
     int channel = param - '0';
 
     // Validate channel against your Universal Meter's ADC count
-    if (channel >= NUM_SD24_ADC_CHANNELS || channel < 0) {
+    if (channel >= NUM_SD24_ADC_CHANNELS || channel < 0)
+    {
         // RP2350 Upgrade: Direct printf replaces the manual UART TX loop
         printf("Incorrect command format. Try 'pwmo>[channel#]'");
         fflush(stdout);
@@ -1029,41 +1097,45 @@ void UpdateDutyChannel() {
     pwm_channel = channel;
 }
 
-void RefreshLCDScreen() {
+void RefreshLCDScreen()
+{
     // 1. Force a hardware reset
     // Replace 7 with your actual Reset (RST) GPIO pin number on the Pico
-    gpio_put(7, 0); 
-    sleep_ms(10);   // Standard SDK delay is much easier than counting cycles
-    gpio_put(7, 1); 
-    sleep_ms(20);   // Give the controller (likely ILI9341 or similar) time to stabilize
+    gpio_put(7, 0);
+    sleep_ms(10); // Standard SDK delay is much easier than counting cycles
+    gpio_put(7, 1);
+    sleep_ms(20); // Give the controller (likely ILI9341 or similar) time to stabilize
 
     // 2. Re-initialize the LCD driver registers
     lcd_change = 1;
-    LCDSetup();     // Ensure this function now uses your new SPI/I2C Pico drivers
+    LCDSetup(); // Ensure this function now uses your new SPI/I2C Pico drivers
 
     // 3. Redraw the UI
-    if(current_screen == Screen_Metering) {
+    if (current_screen == Screen_Metering)
+    {
         // Force the code to ignore previous cached values
         InvalidateLCDCache();
         DisplayChannels();
     }
 }
 
-void FlipScreen() {
+void FlipScreen()
+{
     lcd_change = 1;
-    
+
     // Toggle the flip state
     FLIP = !FLIP;
-    
+
     // Clear the software cache to ensure a full redraw in the new orientation
     InvalidateLCDCache();
-    
-    // Re-initialize the LCD. 
-    // Your LCDSetup() must check the FLIP variable to send the 
+
+    // Re-initialize the LCD.
+    // Your LCDSetup() must check the FLIP variable to send the
     // correct MADCTL (Memory Access Control) register value.
     LCDSetup();
-    
-    if(current_screen == Screen_Metering) {
+
+    if (current_screen == Screen_Metering)
+    {
         DisplayChannels();
     }
 }
@@ -1072,37 +1144,37 @@ void FlipScreen() {
 //******************************************************************************
 const t_rci_commands rci[] = {
     // --- System / Help Commands ---
-    { 0x706C6568, &Print_Help },            // "help"
-    { 0x0000003F, &Print_Help },            // "?" (Padded with nulls)
-    { 0x73726576, &Print_FW_Version },      // "vers"
-    { 0x756E656D, &Print_menu },            // "menu"
-    { 0x74696E69, &Print_init },            // "init"
-    { 0x746C6664, &Print_dflt },            // "dflt"
-    { 0x65766173, &Print_save },            // "save"
-    
+    {0x706C6568, &Print_Help},       // "help"
+    {0x0000003F, &Print_Help},       // "?" (Padded with nulls)
+    {0x73726576, &Print_FW_Version}, // "vers"
+    {0x756E656D, &Print_menu},       // "menu"
+    {0x74696E69, &Print_init},       // "init"
+    {0x746C6664, &Print_dflt},       // "dflt"
+    {0x65766173, &Print_save},       // "save"
+
     // --- Configuration / Settings ---
-    { 0x73616870, &SetGetPhase },           // "phas"
-    { 0x64756162, &SetGetBaudRate },        // "baud"
-    { 0x74696E75, &SetGetVoltageRange },    // "unit" (UMM Voltage Range)
-    { 0x6F686365, &Echo_Enab_Disab },       // "echo"
-    { 0x72617063, &SetGetCalParam },        // "cpar"
-    
+    {0x73616870, &SetGetPhase},        // "phas"
+    {0x64756162, &SetGetBaudRate},     // "baud"
+    {0x74696E75, &SetGetVoltageRange}, // "unit" (UMM Voltage Range)
+    {0x6F686365, &Echo_Enab_Disab},    // "echo"
+    {0x72617063, &SetGetCalParam},     // "cpar"
+
     // --- ADC & Hardware Tests ---
-    { 0x74736574, &testLCD },               // "test"
-    { 0x68636461, &Acquire_ADC_raw_counts }, // "adch"
-    { 0x30636461, &adc0_acquire },          // "adc0"
-    { 0x74756272, &SetGetButtonStateMan },  // "rbut"
-    { 0x6F6D7770, &UpdateDutyChannel },     // "pwmo"
-    
+    {0x74736574, &testLCD},                // "test"
+    {0x68636461, &Acquire_ADC_raw_counts}, // "adch"
+    {0x30636461, &adc0_acquire},           // "adc0"
+    {0x74756272, &SetGetButtonStateMan},   // "rbut"
+    {0x6F6D7770, &UpdateDutyChannel},      // "pwmo"
+
     // --- Display Control ---
-    { 0x64636C72, &RefreshLCDScreen },      // "rlcd"
-    { 0x70696C66, &FlipScreen },            // "flip"
+    {0x64636C72, &RefreshLCDScreen}, // "rlcd"
+    {0x70696C66, &FlipScreen},       // "flip"
 
 #ifdef PC
-    { 0x0D736C63, &ClearConsole },          // "cls\r" (Legacy PC support)
+    {0x0D736C63, &ClearConsole}, // "cls\r" (Legacy PC support)
 #endif
 
-    { 0, NULL }                             // Table Terminator (CRITICAL)
+    {0, NULL} // Table Terminator (CRITICAL)
 };
 
 void Send_comment(char *comment)
@@ -1136,14 +1208,15 @@ void Send_RCI_Param_Error(char *valid_msg)
 
     // MANUALLY print the parameter characters
     // We start at ParamPtr and stop when we hit a Control Character (like \r or \n)
-    if (rt.ParamPtr != NULL && *rt.ParamPtr >= 32) 
+    if (rt.ParamPtr != NULL && *rt.ParamPtr >= 32)
     {
         char *p = rt.ParamPtr;
-        while (*p >= 32 && *p != '\0') {
+        while (*p >= 32 && *p != '\0')
+        {
             putchar(*p++);
         }
-    } 
-    else 
+    }
+    else
     {
         printf("[EMPTY]");
     }
@@ -1291,24 +1364,29 @@ void SendCrLf(void)
     PutTwoChars(256 * '\r' + '\n'); // CRLF;
 }
 
-void processChar(void) {
+void processChar(void)
+{
     char tmp_char;
 
     // While there are characters in the hardware buffer that haven't been echoed
-    while (rt.EchoRxBuffPtr != rt.HostRxBuffPtr) {
+    while (rt.EchoRxBuffPtr != rt.HostRxBuffPtr)
+    {
         tmp_char = rt.HostRxBuff[rt.EchoRxBuffPtr];
 
         // 1. Handle Backspace (0x08) or Delete (0x7F)
-        if ((tmp_char == '\b') || (tmp_char == 0x7F)) {
-            // We only visually back up. 
+        if ((tmp_char == '\b') || (tmp_char == 0x7F))
+        {
+            // We only visually back up.
             // We don't rewind the HostRxBuffPtr here because it causes the "abcabc" loop.
-            if (testBit(rt.Host, CharEchoFlag)) {
-                printf("\b \b"); 
+            if (testBit(rt.Host, CharEchoFlag))
+            {
+                printf("\b \b");
                 fflush(stdout);
             }
-        } 
+        }
         // 2. Handle Normal Characters
-        else if (testBit(rt.Host, CharEchoFlag)) {
+        else if (testBit(rt.Host, CharEchoFlag))
+        {
             putchar(tmp_char);
             fflush(stdout);
         }
@@ -1319,54 +1397,57 @@ void processChar(void) {
     clearBit(rt.Host, CharAvailableFlag);
 }
 
-void ClearRxBuffer(void) {
+void ClearRxBuffer(void)
+{
     // Reset pointers to start
     rt.HostRxBuffPtr = 0;
     rt.EchoRxBuffPtr = 0;
 
     // Optimized memory clear
-    // Note: sizeof(rt.HostRxBuff) works perfectly here as long as HostRxBuff 
+    // Note: sizeof(rt.HostRxBuff) works perfectly here as long as HostRxBuff
     // is a fixed-size array (e.g., char HostRxBuff[256])
-    memset((void*)rt.HostRxBuff, 0, sizeof(rt.HostRxBuff));
+    memset((void *)rt.HostRxBuff, 0, sizeof(rt.HostRxBuff));
 
     /* * IMPORTANT FIX: Bitwise OR vs Addition
      * In your header, CmdAvailFlag and CharAvailableFlag are likely BIT4 and BIT0.
-     * While (BIT4 + BIT0) works, using (BIT4 | BIT0) is the safer 'ARM way' 
+     * While (BIT4 + BIT0) works, using (BIT4 | BIT0) is the safer 'ARM way'
      * to ensure you aren't accidentally carrying bits in 32-bit space.
      */
     clearBit(rt.Host, (CmdAvailFlag | CharAvailableFlag));
 }
 
 // FL is no longer needed, so we define it as empty to keep the code compiling
-#define FL 
+#define FL
 
-uint16 CopyConstString(const char* str_f_ptr, char* dest) {
-    char* bufptr = dest;
-    const char* start_t_ptr = str_f_ptr; // Keep track of the source start
+uint16 CopyConstString(const char *str_f_ptr, char *dest)
+{
+    char *bufptr = dest;
+    const char *start_t_ptr = str_f_ptr; // Keep track of the source start
 
     // Standard copy loop
-    while (*str_f_ptr != 0) {
+    while (*str_f_ptr != 0)
+    {
         *bufptr++ = *str_f_ptr++;
     }
-    
+
     // Add the null terminator (the original 'do-while' did this automatically)
     *bufptr = 0;
 
     // Calculate length: current pos - start pos
     // No need to subtract 1 because bufptr is at the null terminator
-    uint16 str_len = (uint16)(str_f_ptr - start_t_ptr); 
-    
+    uint16 str_len = (uint16)(str_f_ptr - start_t_ptr);
+
     return str_len;
 }
 
-void SendMsgToPC(const char* Msg)
+void SendMsgToPC(const char *Msg)
 {
     // 1. Logic Check: Do we even need a buffer?
-    // On the RP2350, PutStr (which we defined earlier) is already buffered 
+    // On the RP2350, PutStr (which we defined earlier) is already buffered
     // and handles the USB/UART stack for us.
-    
+
     // We can replace the entire manual loop with your existing PutStr.
-    PutStr((char*)Msg);
+    PutStr((char *)Msg);
 
     // 2. Ensure the line is finished
     SendCrLf();
@@ -1392,11 +1473,14 @@ bool ParseRCI(void)
     // --- NEW: PARAMETER DETECTION ---
     // Look for the '>' delimiter to separate CMD from PARAM
     char *delimiter = strpbrk((char *)rt.HostRxBuff, "=>");
-    if (delimiter) {
+    if (delimiter)
+    {
         rt.ParamPtr = delimiter + 1; // Point to the text after '>'
-    } else {
+    }
+    else
+    {
         // If no '>', point to an empty string so printf doesn't crash
-        rt.ParamPtr = ""; 
+        rt.ParamPtr = "";
     }
 
     // 4. Pack the first 4 bytes into a uint32 for fast comparison
@@ -1416,8 +1500,8 @@ bool ParseRCI(void)
 
         if (cmd_word == cmd_listed)
         {
-            ErrorStatus = 0;      // NO_ERROR
-            CMD_index = i;        // Store which command we found
+            ErrorStatus = 0; // NO_ERROR
+            CMD_index = i;   // Store which command we found
 
             // Execute the function pointer
             // The buffer is still intact here, so cmd_baud can see rt.ParamPtr
@@ -1433,7 +1517,7 @@ bool ParseRCI(void)
 
     // 6. Cleanup and Feedback
     // Now that the command is FINISHED executing, we clear the buffer
-    if (ErrorStatus != 0) 
+    if (ErrorStatus != 0)
     {
         if (ErrorStatus == 1) // Unrecognized
         {
@@ -1446,7 +1530,7 @@ bool ParseRCI(void)
         // Note: If ErrorStatus == 2 (PARAM_ERROR), the specific command function
         // already printed the detailed error message, so we do nothing here.
     }
-    else 
+    else
     {
         // NO_ERROR
         if ((rt.OperStatusWord & Command_Executing_eq1_Bit) == 0)
@@ -1458,32 +1542,37 @@ bool ParseRCI(void)
     // FINAL STEP: Wipe the slate for the next command
     ClearRxBuffer();
     wrk_str[0] = 0;
-    
-    return true; 
+
+    return true;
 }
 
-void ServiceSerialHardware(void) {
-    int c = getchar_timeout_us(0); 
-    while (c != PICO_ERROR_TIMEOUT) {
-        
+void ServiceSerialHardware(void)
+{
+    int c = getchar_timeout_us(0);
+    while (c != PICO_ERROR_TIMEOUT)
+    {
+
         // Check for "Enter" keys (CR or LF)
-        if (c == '\r' || c == '\n') {
+        if (c == '\r' || c == '\n')
+        {
             // 1. Place a NULL terminator instead of the CR/LF
-            rt.HostRxBuff[rt.HostRxBuffPtr] = '\0'; 
-            
+            rt.HostRxBuff[rt.HostRxBuffPtr] = '\0';
+
             // 2. Set the flag so ParseRCI knows a command is ready
             setBit(rt.Host, CmdAvailFlag);
-            
-            // Note: We DON'T advance the pointer here because we want 
+
+            // Note: We DON'T advance the pointer here because we want
             // the next command to start at index 0 after ClearRxBuffer runs.
-        } else {
+        }
+        else
+        {
             // Store the actual character
             rt.HostRxBuff[rt.HostRxBuffPtr] = (char)c;
-            
+
             // Advance pointer with power-of-2 wrap
             rt.HostRxBuffPtr = (rt.HostRxBuffPtr + 1) & (HOST_RX_BUFF_LEN - 1);
         }
-        
+
         setBit(rt.Host, CharAvailableFlag);
         c = getchar_timeout_us(0);
     }

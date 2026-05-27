@@ -57,11 +57,11 @@ void Lcd_Write_Bus(unsigned char d)
 // 4. Send Command
 void LCD_writeCommand(unsigned char cmd)
 {
-    LCD_PIN_LOW_CMD; // D/C Low
-    LCD_selectLCD(); // CS Low
+    LCD_PIN_LOW_CMD;    // D/C Low
+    LCD_selectLCD();    // CS Low
     Lcd_Write_Bus(cmd); // Sends data
-    sleep_us(1); // <--- ADD THIS TEMPORARY HACK HERE
-    LCD_deselectLCD(); // CS High
+    sleep_us(1);        // <--- ADD THIS TEMPORARY HACK HERE
+    LCD_deselectLCD();  // CS High
 }
 
 // 5. Send Data
@@ -235,7 +235,7 @@ void draw_pixel(unsigned int x, unsigned int y, uint32_t color)
 void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
     // 1. Open a window that is exactly 1 pixel tall and 'l' pixels wide
-    setCursor(x, y, x + l - 1, y); 
+    setCursor(x, y, x + l - 1, y);
 
     // 2. Pre-convert color once
     unsigned char r = (color >> 16) & 0xFF;
@@ -247,7 +247,7 @@ void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
     // 3. Fast stream
     for (unsigned int i = 0; i < l; i++)
     {
-        // NOTE: If your setCursor doesn't automatically send 0x2C, 
+        // NOTE: If your setCursor doesn't automatically send 0x2C,
         // keep your LCD_writeCommand(0x2C) right here before the loop!
         LCD_writeData(high_byte);
         LCD_writeData(low_byte);
@@ -259,14 +259,14 @@ void V_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
     // 1. Establish the vertical bounding box once (1 pixel wide, 'l' pixels tall)
     // A vertical line starting at y with length 'l' spans from y to (y + l - 1)
-    setCursor(x, y, x, y + l - 1); 
+    setCursor(x, y, x, y + l - 1);
 
     // 2. CRITICAL OPTIMIZATION: Extract loop-invariant math
     // Convert from RGB888 to RGB565 exactly once before streaming data
     unsigned char r = (color >> 16) & 0xFF;
     unsigned char g = (color >> 8) & 0xFF;
     unsigned char b = color & 0xFF;
-    
+
     uint8_t high_byte, low_byte;
     rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
 
@@ -568,9 +568,9 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
               uint32_t color, uint32_t bg, uint8_t size_x,
               uint8_t size_y)
 {
-    // 1. Calculate full block dimensions including scaling 
+    // 1. Calculate full block dimensions including scaling
     // (Note: includes the 13th column spacer directly in the window)
-    uint16_t total_width  = 13 * size_x; 
+    uint16_t total_width = 13 * size_x;
     uint16_t total_height = 16 * size_y;
 
     // 2. Set ONE bounding box window for the entire character block once
@@ -653,7 +653,7 @@ void LCD_Clear(uint32_t color)
     while (pio_sm_get_pc(pio_global, sm_global) != (offset + screen_spi_offset_entry_point))
         ;
 
-    LCD_deselectLCD();       // 2. Watch how CS reacts relative to this spike
+    LCD_deselectLCD(); // 2. Watch how CS reacts relative to this spike
 }
 
 void print(int16_t x, int16_t y, const char *str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width)

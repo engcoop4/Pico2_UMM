@@ -508,5 +508,5 @@ bool Display_Bounds_Check_X(uint16_t tx, uint16_t x_start, uint16_t width)
 
 bool Display_Bounds_Check_Y(uint16_t ty, uint16_t y_start, uint16_t height)
 {
-    return(ty >= y_start && ty <= (y_start + height));
+    return (ty >= y_start && ty <= (y_start + height));
 }

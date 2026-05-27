@@ -13,48 +13,48 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 
-typedef int8_t              Schar;
-typedef uint8_t             Uchar;
-typedef uint16_t            uint16;
-typedef uint32_t            uint32;
-typedef unsigned int        uint;   // Standard 'uint' is 32-bit on RP2350
-typedef int16_t             Int16;
-typedef int32_t             Int32;
-typedef char                Boolean;
-typedef uint8_t             uint8;
-typedef uint32_t            DWORD;
-typedef int                 BOOL;
+typedef int8_t Schar;
+typedef uint8_t Uchar;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef unsigned int uint; // Standard 'uint' is 32-bit on RP2350
+typedef int16_t Int16;
+typedef int32_t Int32;
+typedef char Boolean;
+typedef uint8_t uint8;
+typedef uint32_t DWORD;
+typedef int BOOL;
 
 // --- 2. BIT MANIPULATION MACROS ---
-#define testBitNo(var, bit_no)          (var & (1u << bit_no))
-#define setBitNo(var, bit_no)           (var |= (1u << bit_no))
-#define clearBitNo(var, bit_no)         (var &= ~(1u << bit_no))
-#define updateBitNo(var, bit_no, src)   (var = (var & (~(1u << bit_no))) | (src & (1u << bit_no)))
-#define writeBitNo(var, bit_no, val)    (var = (var & (~(1u << bit_no))) | (val << bit_no))
+#define testBitNo(var, bit_no) (var & (1u << bit_no))
+#define setBitNo(var, bit_no) (var |= (1u << bit_no))
+#define clearBitNo(var, bit_no) (var &= ~(1u << bit_no))
+#define updateBitNo(var, bit_no, src) (var = (var & (~(1u << bit_no))) | (src & (1u << bit_no)))
+#define writeBitNo(var, bit_no, val) (var = (var & (~(1u << bit_no))) | (val << bit_no))
 
-#define setBit(var, bit_value)          (var |= (bit_value))
-#define clearBit(var, bit_value)        (var &= ~(bit_value))
-#define toggleBit(var, bit_value)       (var ^= (bit_value))
-#define testBit(var, bit_value)         (var & (bit_value))
+#define setBit(var, bit_value) (var |= (bit_value))
+#define clearBit(var, bit_value) (var &= ~(bit_value))
+#define toggleBit(var, bit_value) (var ^= (bit_value))
+#define testBit(var, bit_value) (var & (bit_value))
 
 // --- 3. BIT DEFINITIONS (0-31) ---
 // Using 'u' suffix to ensure unsigned 32-bit constants
-#define BIT0  (0x00000001u)
-#define BIT1  (0x00000002u)
-#define BIT2  (0x00000004u)
-#define BIT3  (0x00000008u)
-#define BIT4  (0x00000010u)
-#define BIT5  (0x00000020u)
-#define BIT6  (0x00000040u)
-#define BIT7  (0x00000080u)
-#define BIT8  (0x00000100u)
-#define BIT9  (0x00000200u)
-#define BITA  (0x00000400u)
-#define BITB  (0x00000800u)
-#define BITC  (0x00001000u)
-#define BITD  (0x00002000u)
-#define BITE  (0x00004000u)
-#define BITF  (0x00008000u)
+#define BIT0 (0x00000001u)
+#define BIT1 (0x00000002u)
+#define BIT2 (0x00000004u)
+#define BIT3 (0x00000008u)
+#define BIT4 (0x00000010u)
+#define BIT5 (0x00000020u)
+#define BIT6 (0x00000040u)
+#define BIT7 (0x00000080u)
+#define BIT8 (0x00000100u)
+#define BIT9 (0x00000200u)
+#define BITA (0x00000400u)
+#define BITB (0x00000800u)
+#define BITC (0x00001000u)
+#define BITD (0x00002000u)
+#define BITE (0x00004000u)
+#define BITF (0x00008000u)
 
 #define BIT10 BITA
 #define BIT11 BITB
@@ -82,54 +82,54 @@ typedef int                 BOOL;
 #define BIT31 (1u << 31)
 
 // --- 4. APPLICATION LOGIC BITS ---
-#define SinglePhase_eq0_3ph_eq1_Bit  BIT11
-#define ADC0_DISPLAY1_BIT            BIT12
-#define ADC0_DISPLAY2_BIT            BIT13
-#define ADC0_DISPLAY3_BIT            BIT14
+#define SinglePhase_eq0_3ph_eq1_Bit BIT11
+#define ADC0_DISPLAY1_BIT BIT12
+#define ADC0_DISPLAY2_BIT BIT13
+#define ADC0_DISPLAY3_BIT BIT14
 
-#define Command_Executing_eq1_Bit    BIT24
-#define ButtonTest_eq1_Bit           BIT0
+#define Command_Executing_eq1_Bit BIT24
+#define ButtonTest_eq1_Bit BIT0
 
 // Button/LED Bits (Mapped to Port 5 logic)
 #define Button1_Bit BIT0
 #define Button2_Bit BIT1
 #define Button3_Bit BIT2
 #define Button4_Bit BIT3
-#define LED1_Bit    BIT4
-#define LED2_Bit    BIT5
-#define LED3_Bit    BIT6
-#define LED4_Bit    BIT7
+#define LED1_Bit BIT4
+#define LED2_Bit BIT5
+#define LED3_Bit BIT6
+#define LED4_Bit BIT7
 
 // --- 5. SYSTEM CONSTANTS ---
-#define CMD_LEN             4
-#define HOST_RX_BUFF_LEN    256
-#define HOST_XMT_BUFF_LEN   256
-#define CaRet               0x0D
-#define CharAvailableFlag   BIT0
-#define CharEchoFlag        BIT2
-#define CmdAvailFlag        BIT4
+#define CMD_LEN 4
+#define HOST_RX_BUFF_LEN 256
+#define HOST_XMT_BUFF_LEN 256
+#define CaRet 0x0D
+#define CharAvailableFlag BIT0
+#define CharEchoFlag BIT2
+#define CmdAvailFlag BIT4
 
 // Error Codes
-#define OK                  0x00
-#define NO_ERROR            OK
-#define SIO_CMD_ERROR       0x01
-#define BAD_SIO_CMD_ERR     SIO_CMD_ERROR
-#define PARAM_ERROR         0x02
-#define BAD_VALUE_ERR       PARAM_ERROR
+#define OK 0x00
+#define NO_ERROR OK
+#define SIO_CMD_ERROR 0x01
+#define BAD_SIO_CMD_ERR SIO_CMD_ERROR
+#define PARAM_ERROR 0x02
+#define BAD_VALUE_ERR PARAM_ERROR
 
 // Output Macros
-#define PutChar             putchar
-#define CPUTS               PutStr
-#define cputs               CPUTS
+#define PutChar putchar
+#define CPUTS PutStr
+#define cputs CPUTS
 
 // Calibration/Point Indices
-#define Y1_low_point        0
-#define X1_low_point        1
-#define Y2_high_point       2
-#define X2_high_point       3
+#define Y1_low_point 0
+#define X1_low_point 1
+#define Y2_high_point 2
+#define X2_high_point 3
 
-#define SHOW_LONG           0x10
-#define SHOW_Qfloat          0
+#define SHOW_LONG 0x10
+#define SHOW_Qfloat 0
 
 // Buffer Sizes
 #define HOST_XMT_BUFF_LEN 256
@@ -613,7 +613,7 @@ uint16 PutStr(char *Str);
  * @note This implementation avoids branching by using a single unsigned comparison
  * to validate the character range.
  */
-//int toupper(int ch);
+// int toupper(int ch);
 
 /**
  * @brief Converts an entire null-terminated string to uppercase in-place.
@@ -787,9 +787,10 @@ typedef struct
     float calpthigh;
 } Calibr2points;
 
-typedef struct {
-    uint32 cmd_code;       // Changed from cmd_id to cmd_code
-    void (*f_ptr)(void);   // Changed from handler to f_ptr
+typedef struct
+{
+    uint32 cmd_code;     // Changed from cmd_id to cmd_code
+    void (*f_ptr)(void); // Changed from handler to f_ptr
 } t_rci_commands;
 
 extern const t_rci_commands rci[];
@@ -904,40 +905,42 @@ extern uint32_t ErrorStatus;
 uint32_t Convert_4_ASCII_to_Uint32(Uchar *pstr);
 // --- Project Constants & Protocol Logic (KEEP THESE) ---
 #define ASCII_TESTING
-#define FW_VERSION      30
-#define FW_ver_float    (((float)(FW_VERSION) + 0.1f) / 10.0f)
+#define FW_VERSION 30
+#define FW_ver_float (((float)(FW_VERSION) + 0.1f) / 10.0f)
 
 #define CmdVerboseResponse BIT7
 
-enum Protocols {
-    SETUP      = 0x00,
-    DNP3       = 0x11,
-    MODBUS     = 0x22,
+enum Protocols
+{
+    SETUP = 0x00,
+    DNP3 = 0x11,
+    MODBUS = 0x22,
     ASCII_CMDS = 0x33,
     ASCII_MENU = 0x44
 };
 
-enum Board_Addresses {
-    ALARM_WRITE   = 0x10,
-    ALARM_READ    = 0x11,
+enum Board_Addresses
+{
+    ALARM_WRITE = 0x10,
+    ALARM_READ = 0x11,
     DISPLAY_WRITE = 0x40,
-    DISPLAY_READ  = 0x41,
-    IO_WRITE      = 0x82,
-    IO_READ       = 0x83,
-    A_TO_D_WRITE  = 0xD0,
-    A_TO_D_READ   = 0xD1
+    DISPLAY_READ = 0x41,
+    IO_WRITE = 0x82,
+    IO_READ = 0x83,
+    A_TO_D_WRITE = 0xD0,
+    A_TO_D_READ = 0xD1
 };
 
 // --- TWI (I2C) Constants (KEEP the logic, DELETE the hardware bits) ---
 #define TWI_TIMEOUT_ms 200
 #define TWI_MSG_ALARMS 14
 #define TWI_BATT_VOLTS 1
-#define NOT_DONE       0
-#define DONE           10
+#define NOT_DONE 0
+#define DONE 10
 
-/* * NOTE: TWINT, TWEA, TWSTA, TWSTO, TWEN, TWIE, and TWSR_STATUS_MASK 
+/* * NOTE: TWINT, TWEA, TWSTA, TWSTO, TWEN, TWIE, and TWSR_STATUS_MASK
  * are DELETED. These are hardware-specific to the old chip's I2C controller.
- * On the RP2350, the I2C peripheral handles these states internally 
+ * On the RP2350, the I2C peripheral handles these states internally
  * through the Pico SDK i2c_write/read functions.
  */
 
