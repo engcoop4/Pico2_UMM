@@ -328,6 +328,17 @@ extern int diff_display[8];
 extern int16_t saved_Ypos[7];
 extern uint8_t LCD_ch_source[7];
 
+typedef struct
+{
+    uint16_t x;
+    uint16_t y;
+    uint16_t w;
+    uint16_t h;
+    volatile uint8_t *button_flag; // Points to the global variable flag
+} TouchZone;
+
+extern char const *display_unit[6];
+
 void LCDSetup(void);
 void ButtonLayout(void);
 void MENU_ControlsDisplay(void);

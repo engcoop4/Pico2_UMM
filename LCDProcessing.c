@@ -117,6 +117,14 @@ char const *display_title[5] = {
     "Frequency",
     "CUSTOM DISPLAY"};
 
+char const *display_unit[6] = {
+    "VAC",
+    "VDC",
+    "IAC",
+    "IDC",
+    "W",
+    "Hz"};
+
 const WFI_ScreenFunction Screen_Changes[9] = {
     [Screen_ControlsDisplay] = ControlsDisplay,
     [Screen_TouchDecision] = TouchDecision,
@@ -849,44 +857,38 @@ void NumberDisplays(void)
 
     if (touch_triggered)
     {
-        // get coordinate readings
         MeasureTouch();
 
-        // won't trigger if touch is not detected, as values would be -1
         if (X_Cord > 0 && Y_Cord > 0)
         {
-            // can combine/group general sections via y coordinate, then hone in on section via x coordinate ?
-            // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
-            if (Display_Bounds_Check_Y(Y_Cord, NUMD_TRI_THRESH_Y_TOP, NUMD_TRI_THRESH_Y_H))
-            {
-                if (Display_Bounds_Check_X(X_Cord, NUMD_THRESH_X_LEFT_BOUND, NUMD_DEC_THRESH_X_W))
-                {
-                    b2_pressed = 1;
-                }
-                else if (Display_Bounds_Check_X(X_Cord, NUMD_INC_THRESH_X_LEFT, NUMD_INC_THRESH_X_W))
-                {
-                    b1_pressed = 1;
-                }
-            }
+            // Define our 4 touch zones cleanly in a single table
+            const TouchZone zones[] = {
+                // X_Start, Y_Start, Width, Height, Target Flag Pointer
+                {NUMD_THRESH_X_LEFT_BOUND, NUMD_TRI_THRESH_Y_TOP, NUMD_DEC_THRESH_X_W, NUMD_TRI_THRESH_Y_H, &b2_pressed},     // Decrease
+                {NUMD_INC_THRESH_X_LEFT, NUMD_TRI_THRESH_Y_TOP, NUMD_INC_THRESH_X_W, NUMD_TRI_THRESH_Y_H, &b1_pressed},       // Increase
+                {NUMD_THRESH_X_LEFT_BOUND, NUM_BUT_THRESH_Y_TOP, NUM_RET_THRESH_X_RIGH, NUM_BUT_THRESH_Y_H, &return_pressed}, // Return
+                {NUM_ENT_THRESH_X_LEFT, NUM_BUT_THRESH_Y_TOP, NUM_ENT_THRESH_X_W, NUM_BUT_THRESH_Y_H, &enter_pressed}         // Enter
+            };
 
-            else if (Display_Bounds_Check_Y(Y_Cord, NUM_BUT_THRESH_Y_TOP, NUM_BUT_THRESH_Y_H))
+            // Loop through the table and test each region
+            for (int i = 0; i < 4; i++)
             {
-                if (Display_Bounds_Check_X(X_Cord, NUMD_THRESH_X_LEFT_BOUND, NUM_RET_THRESH_X_RIGH))
+                if (Display_Bounds_Check_X(X_Cord, zones[i].x, zones[i].w) &&
+                    Display_Bounds_Check_Y(Y_Cord, zones[i].y, zones[i].h))
                 {
-                    return_pressed = 1;
-                }
-                else if (Display_Bounds_Check_X(X_Cord, NUM_ENT_THRESH_X_LEFT, NUM_ENT_THRESH_X_W))
-                {
-                    enter_pressed = 1;
+                    *(zones[i].button_flag) = 1; // Trip the corresponding global variable
+                    break;                       // Hit found, skip checking the remaining zones
                 }
             }
         }
+
+        // FIX 1: Re-enable the interrupt so the touchscreen doesn't lock up forever
         WaitForTouchRelease();
         gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
     }
 
+    // Process increment / decrement step via delta math
     int8_t change = b1_pressed - b2_pressed;
-
     if (change != 0)
     {
         numberdisplays += change;
@@ -895,19 +897,23 @@ void NumberDisplays(void)
 
     if (value_changed)
     {
+        // Wrap around logic
         numberdisplays = (numberdisplays > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberdisplays < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberdisplays);
         UpdateNumberOfDisplays();
     }
 
+    // Process screen transitions
     if (enter_pressed)
     {
-        j_idx = 1;          // start at Display A
-        numberchannels = 1; // start at channel 1
+        enter_pressed = 0; // FIX 2: Clear flag before swapping screens
+        j_idx = 1;
+        numberchannels = 1;
         current_screen = Screen_ChannelSelection;
         force_redraw = true;
     }
     else if (return_pressed)
     {
+        return_pressed = 0; // FIX 2: Clear flag before swapping screens
         current_screen = Screen_OperatingMode;
         force_redraw = true;
     }
@@ -1115,7 +1121,6 @@ void ActiveMetering(void)
     // Read your chip and update the LCD here
     // Run_Metering_Cycle();
 
-    /*
     if (touch_triggered)
     {
         MeasureTouch();
@@ -1130,7 +1135,6 @@ void ActiveMetering(void)
             }
         }
     }
-        */
 
     // 2. CONTEXT-AWARE RETURN (Non-Blocking)
     if (timer_return_flag)

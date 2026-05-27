@@ -57,8 +57,6 @@ extern volatile bool force_redraw;
 extern volatile uint8_t uart_command_received;
 extern volatile bool timer_return_flag;
 
-extern char const *display_unit[6];
-
 extern int8_t numberdisplays;
 extern int8_t numberchannels;
 extern int8_t cursor_position;

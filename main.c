@@ -57,14 +57,6 @@ const MainScreenFunction Screen_Options[9] = {
     [Screen_Metering] = DisplayChannels // safety precaution for 'InitializationDone'
 };
 
-char const *display_unit[6] = {
-    "VAC",
-    "VDC",
-    "IAC",
-    "IDC",
-    "W",
-    "Hz"};
-
 // PIO Setup
 PIO pio_global = pio0;
 uint sm_global;
@@ -93,7 +85,7 @@ int main()
 
     while (true)
     {
-        watchdog_update();
+        //watchdog_update();
 
         ServiceSerialHardware(); // Pulls bytes from USB/UART into your buffer, for command processing
 

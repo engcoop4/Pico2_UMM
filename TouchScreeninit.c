@@ -10,6 +10,7 @@
 #include "TouchScreeninit.h"
 #include "Hardware.h"
 #include "AdafruitDisplayInits.h"
+#include "hardware/watchdog.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -322,6 +323,7 @@ void WaitForTouchRelease(void)
             count = 0;
         }
 
+        //watchdog_update();
         busy_wait_us(100); // replaces __delay_cycles(1000)
     }
 
