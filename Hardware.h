@@ -44,6 +44,7 @@
 // Replaces pgm_read_byte for compatibility
 #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
 
+void PIO_Init(void);
 void Buttons_Init(void);
 void LEDs_Init(void);
 bool timer_callback_reset_check(struct repeating_timer *t);

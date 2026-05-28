@@ -54,14 +54,7 @@ typedef enum
 
 extern volatile State_of_Screen current_screen;
 extern volatile bool force_redraw;
-extern volatile uint8_t uart_command_received;
 extern volatile bool timer_return_flag;
-
-extern int8_t numberdisplays;
-extern int8_t numberchannels;
-extern int8_t cursor_position;
-extern int8_t selected_display;
-extern int8_t unit_index;
 
 typedef enum
 {

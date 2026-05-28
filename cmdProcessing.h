@@ -897,8 +897,8 @@ typedef struct
 } RealTimeVars;
 
 // Variable Declarations
-extern RealTimeVars rt;
 extern SYS_SPECIFIC_DATA SysData;
+extern RealTimeVars rt;
 extern uint32_t ErrorStatus;
 
 // Prototypes

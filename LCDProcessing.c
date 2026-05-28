@@ -41,7 +41,12 @@ int cali;
 
 extern uint16_t touch_baseline;
 extern volatile uint16_t touch_triggered;
-extern volatile uint8_t return_request_flag;
+
+int8_t numberdisplays;
+int8_t numberchannels;
+int8_t cursor_position;
+int8_t selected_display;
+int8_t unit_index;
 
 extern volatile bool screen_updating;
 
@@ -50,7 +55,7 @@ static int lastB2 = 0;     // last button state SW2 (DOWN)
 static int lastEnter = 0;  // last button state SW4 (ENTER)
 static int lastReturn = 0; // last button state SW3 (RETURN)
 
-extern volatile uint8_t entry_method;
+volatile uint8_t entry_method = 0;
 
 // UI Dispatcher global variables
 int8_t b1_pressed;

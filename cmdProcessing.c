@@ -39,10 +39,16 @@ static uint16_t loop_ticks = 0;
 // sets default last_displayed values to lowest "possible" value to force first update
 // phase out this implementation
 static float last_displayed_values[NUM_SD24_ADC_CHANNELS] = {0};
-extern volatile bool force_full_redraw;
+volatile bool force_full_redraw = false;
 
 // Externally declared 24-bit ADC result array (from SD24_B ISR in main.c)
 extern volatile int32_t ADCbuffer[NUM_SD24_ADC_CHANNELS];
+
+extern int8_t numberdisplays;
+extern int8_t numberchannels;
+extern int8_t cursor_position;
+extern int8_t selected_display;
+extern int8_t unit_index;
 /************************************************************************************************************/
 /*+++++++++++++++Commands+++++++++++++++*/
 Uchar *CommStr;
@@ -55,7 +61,7 @@ uint32 ErrorStatus = sizeof(SysData);
 #define UNIT_250V 250
 
 // pwmo command
-extern uint pwm_channel;
+uint pwm_channel;
 
 // Serial command processing
 char *strOut; // not found in project
@@ -86,6 +92,10 @@ int lcd_change = 0;
 
 #define ostr buffer
 char *zerostr = "0.0";
+
+SYS_SPECIFIC_DATA SysData;
+RealTimeVars rt;
+uint32_t ErrorStatus;
 
 #ifndef PC
 #else

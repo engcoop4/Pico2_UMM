@@ -24,26 +24,10 @@
 #include "cmdProcessing.h"
 #include "TouchScreeninit.h"
 
-// LCD PARAMETERS FOR TESTING
-int8_t numberdisplays = 1;
-int8_t numberchannels = 1;
-int8_t cursor_position = 0;
-int8_t selected_display = 0;
-int8_t unit_index = 0;
-
 volatile State_of_Screen current_screen = Screen_ControlsDisplay;
 volatile bool force_redraw = true;
-volatile uint8_t uart_command_received = 0;
-volatile uint8_t return_request_flag = 0;
-volatile uint8_t entry_method = 0;
 
 volatile uint32_t ADCbuffer[NUM_SD24_ADC_CHANNELS]; // required to be 32-bit since SD24 memory holds 32-bit (8 bits of sign extension + 24-bit)
-volatile uint16_t pulse_width;
-uint pwm_channel;
-volatile bool force_full_redraw = false;
-SYS_SPECIFIC_DATA SysData;
-
-RealTimeVars rt;
 
 const MainScreenFunction Screen_Options[9] = {
     [Screen_ControlsDisplay] = MENU_ControlsDisplay,
@@ -57,11 +41,6 @@ const MainScreenFunction Screen_Options[9] = {
     [Screen_Metering] = DisplayChannels // safety precaution for 'InitializationDone'
 };
 
-// PIO Setup
-PIO pio_global = pio0;
-uint sm_global;
-uint offset;
-
 int main()
 {
     // core hardware
@@ -70,12 +49,7 @@ int main()
     // delay for USB
     sleep_ms(100);
 
-    // setup PIO
-    offset = pio_add_program(pio_global, &screen_spi_program);
-    sm_global = pio_claim_unused_sm(pio_global, true);
-
-    screen_spi_program_init(pio_global, sm_global, offset, 4, 5, 32000000.0f); // 30 MHz works, 32 MHz seems to be the most stable, highest value
-
+    PIO_Init();
     LEDs_Init();
     Buttons_Init();
     LCDinit();

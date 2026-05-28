@@ -3,16 +3,22 @@
 #include "LCDProcessing.h"
 #include "cmdProcessing.h"
 #include "Global.h"
+#include "hardware/pio.h"
+#include "screen_spi.pio.h"
 
 #define RESET_THRESHOLD 300 // 3 seconds at 10ms intervals
 volatile uint32_t reset_hold_counter = 0;
 volatile bool timer_return_flag = false;
 
-void Buttons_Init(void)
-{
-    adc_init();
-    adc_gpio_init(SWLADDER);
-    adc_select_input(2);
+PIO pio_global = pio0;
+uint sm_global;
+uint offset;
+
+void PIO_Init(void) {
+    offset = pio_add_program(pio_global, &screen_spi_program);
+    sm_global = pio_claim_unused_sm(pio_global, true);
+
+    screen_spi_program_init(pio_global, sm_global, offset, 4, 5, 32000000.0f); // 30 MHz works, 32 MHz seems to be the most stable, highest value
 }
 
 void LEDs_Init(void)
@@ -32,6 +38,13 @@ void LEDs_Init(void)
     gpio_put(LED2, 1);
     gpio_put(LED3, 1);
     gpio_put(LED4, 1);
+}
+
+void Buttons_Init(void)
+{
+    adc_init();
+    adc_gpio_init(SWLADDER);
+    adc_select_input(2);
 }
 
 bool timer_callback_reset_check(struct repeating_timer *t)
@@ -81,7 +94,7 @@ void Return_Timer_Setup(void)
     // controls how long a restart takes, but cannot be too short or any processes that take longer than the chosen amount of time will trigger a reset,
     // can prolly go shorter than 3 seconds tho (kinda long, 3 seconds hold + 3 seconds reset = 6 second cycle)
     // 1000 = 1 second, etc.
-    //watchdog_enable(3000, false);
+    // watchdog_enable(3000, false);
 }
 
 void Command_Processing_Setup(void)
