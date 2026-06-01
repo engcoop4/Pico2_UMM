@@ -16,6 +16,9 @@
 #define ENTRY_CUSTOM 1
 #define ENTRY_PRESET 2
 
+#define HOLD_DELAY_MS 750  // 1 second before repeat starts
+#define REPEAT_RATE_MS 150 // Time between increments during hold (approx. 7 items/sec)
+
 /* ---------- GRAPHICS PIXEL VALUES ---------- */
 /* ---------- KEY ---------- */
 /* F = FACTOR */
@@ -311,10 +314,10 @@
 #define NUMD_INC_THRESH_X_LEFT 195
 #define NUMD_INC_THRESH_X_W 60
 #define NUM_BUT_THRESH_Y_TOP 250
-#define NUM_BUT_THRESH_Y_H 69
+#define NUM_BUT_THRESH_Y_H 60
 #define NUM_RET_THRESH_X_RIGH 106
 #define NUM_ENT_THRESH_X_W 106
-#define NUM_ENT_THRESH_X_LEFT 133
+#define NUM_ENT_THRESH_X_LEFT 130
 
 // Menu Channel Selection
 #define NUMC_TRI_THRESH_Y_TOP 60

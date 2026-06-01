@@ -1,15 +1,10 @@
 // C/R-Pi libraries
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/uart.h"
 #include "hardware/spi.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
-#include "hardware/irq.h"
-#include "hardware/timer.h"
 #include "hardware/watchdog.h"
-#include "hardware/pio.h"
-#include "screen_spi.pio.h"
 
 // Initialization/hardware
 #include "initSPI.h"

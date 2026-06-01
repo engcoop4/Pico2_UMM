@@ -77,6 +77,8 @@ uint16_t CalculateTouch_Stable(void);
 // formerly void WaitForReleaseTS(void)
 void WaitForTouchRelease(void);
 
+bool IsFingerPhysicallyTouching(void);
+
 void TouchScreenReset(void);
 
 uint16_t ReadTouchX(void);

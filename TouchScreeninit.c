@@ -339,6 +339,12 @@ void WaitForTouchRelease(void)
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
 }
 
+bool IsFingerPhysicallyTouching(void)
+{
+    // If using direct GPIO digital readings for the touch pressure line:
+    return (gpio_get(Y_MINUS) == 0); // Assuming active-low falling edge
+}
+
 void TouchScreenReset(void)
 {
 

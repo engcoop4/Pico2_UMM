@@ -279,6 +279,9 @@ void FinishTouchCalibration(void)
 
     print_centered(FindCenterY(CALI_PROMPT_X, CALI_SCREEN_EDGE, "CALIBRATION COMPLETE", FONT_1),
                    "CALIBRATION COMPELTE", WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
+
+    // delay for user to read screen
+    sleep_ms(150);
     screen_updating = false;
     TouchInterrupt_Helper();
 }
@@ -305,8 +308,14 @@ void MENU_OperatingMode(void)
               title[i], WHITE, box_color[i], FONT_1, FONT_1, SCREEN_EDGE_X);
     }
 
+    if (touch_init)
+    {
+        Trianglef(10, 31, 16, 25, 16, 37, GREY);
+        Rectf(16, 29, 8, 5, GREY);
+    }
+
     // Draw the cursor highlight at its current position
-    Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
+    Rect(OPER_MODE_BOX_X - 1, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)) - 1, OPER_MODE_BOX_W + 1, OPER_MODE_BOX_H + 1, WHITE);
     screen_updating = false;
     TouchInterrupt_Helper();
 }
@@ -319,10 +328,10 @@ void UpdateOperatingModeSelection(void)
     for (int i = 0; i < NUMBER_OF_MODES; i++)
     {
 
-        Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * i)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, BLACK);
+        Rect(OPER_MODE_BOX_X - 1, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * i)) - 1, OPER_MODE_BOX_W + 1, OPER_MODE_BOX_H + 1, BLACK);
     }
 
-    Rect(OPER_MODE_BOX_X, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)), OPER_MODE_BOX_W, OPER_MODE_BOX_H, WHITE);
+    Rect(OPER_MODE_BOX_X - 1, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)) - 1, OPER_MODE_BOX_W + 1, OPER_MODE_BOX_H + 1, WHITE);
     title_index = cursor_position;
     screen_updating = false;
     TouchInterrupt_Helper();
@@ -644,35 +653,88 @@ void WaitForInput(void)
 void ButtonPolling(void)
 {
     static bool lock_engaged = false;
+    
+    // Tracking variables for hold-and-repeat
+    static uint32_t button_press_start_time = 0;
+    static uint32_t last_repeat_time = 0;
+    static uint8_t active_button = 0; // 0 = None, 1 = Up (b1), 2 = Down (b2)
+
     adc_select_input(2);
     uint16_t adc_val = adc_read();
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
 
+    // --- CASE 1: NO BUTTON PRESSED (RELEASED) ---
     if (adc_val < WFI_BUT_THRESH_NP)
     {
         lock_engaged = false;
+        active_button = 0; // Clear hold tracking
+        return;
     }
 
+    // --- CASE 2: REPEAT LOGIC FOR AN EXISTING HOLD ---
+    if (lock_engaged && active_button != 0)
+    {
+        // Re-verify the active button is still physically held down
+        // (Prevents noise or quick sliding across the ladder from locking an input)
+        bool button_still_held = false;
+        if (active_button == 1 && adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI) button_still_held = true;
+        if (active_button == 2 && adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI) button_still_held = true;
+
+        if (button_still_held)
+        {
+            // Check if we've crossed the 1-second hold threshold
+            if ((current_time - button_press_start_time) >= HOLD_DELAY_MS)
+            {
+                // Throttle how fast it increments/decrements
+                if ((current_time - last_repeat_time) >= REPEAT_RATE_MS)
+                {
+                    if (active_button == 1) b1_pressed = 1;
+                    if (active_button == 2) b2_pressed = 1;
+                    
+                    last_repeat_time = current_time; // Reset repeat ticker
+                }
+            }
+            return; // Exit early, we handled the hold state
+        }
+        else
+        {
+            // The button shifted or released slightly, break the hold tracking
+            active_button = 0;
+            lock_engaged = false;
+        }
+    }
+
+    // --- CASE 3: FRESH INITIAL PRESS ---
     if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
     {
-        sleep_ms(5);
+        sleep_ms(5); // Debounce / SPI noise window
         adc_val = adc_read();
 
         if (adc_val >= WFI_BUT_ENTER_THRESH_P)
         {
             enter_pressed = 1;
-            lock_engaged = true;
+            lock_engaged = true; // Enter doesn't auto-repeat
+            active_button = 0;
         }
-        // REMOVED: RETURN block is now handled by the timer!
-
         else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
         {
             b2_pressed = 1;
             lock_engaged = true;
+            
+            // Start the hold tracking clock
+            active_button = 2;
+            button_press_start_time = current_time;
+            last_repeat_time = current_time;
         }
         else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
         {
             b1_pressed = 1;
             lock_engaged = true;
+            
+            // Start the hold tracking clock
+            active_button = 1;
+            button_press_start_time = current_time;
+            last_repeat_time = current_time;
         }
     }
 }
@@ -776,43 +838,47 @@ void OperatingMode(void)
         // get coordinate readings
         MeasureTouch();
 
-        // Only process if the touch is valid (greater than 0) - the interrupt sets coord values to -1, so this wont execute if the readings dont process correctly
         if (X_Cord > 0 && Y_Cord > 0)
         {
-            // increment through the possible cursor options until the Display_Bounds_Check function returns true
-            // a true return here means that X_Cord and Y_Cord are both within the expected bounds of a specific box, so the cursor position
-            // gets set to the iteration value it is on, and then highlights and executes the code as if it is a button press
+            bool match_found = false;
+
+            // 1. Check our 5 main row option selections
             for (int i = 0; i < 5; i++)
             {
-                // Logic: Start at 60Y, each box is 48px high, stepping by 52px
                 uint16_t row_top = 60 + (52 * i);
 
                 if (Display_Bounds_Check_Total(X_Cord, Y_Cord, 6, row_top, 227, 48))
                 {
                     cursor_position = i;
                     UpdateOperatingModeSelection();
-
-                    // immediately trigger transition after highlighting box selection
                     enter_pressed = 1;
-                    touch_triggered = 0;
+                    match_found = true;
                     break;
+                }
+            }
+
+            // 2. Check backspace zone if no option row was matched
+            if (!match_found)
+            {
+                if (X_Cord < 35 && Y_Cord < 45)
+                {
+                    return_pressed = 1;
                 }
             }
         }
 
         WaitForTouchRelease();
-        // Re-enable interrupt for next touch event
+
+        // Re-enable interrupt for hardware tracking
         gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
     }
 
-    // button logic
-    // direction: b2 (DOWN) is +1, b1 (UP) is -1
+    // Button polling adjustments (Direction: b2 [DOWN] is +1, b1 [UP] is -1)
     int8_t moved = b2_pressed - b1_pressed;
     if (moved != 0)
     {
         cursor_position += moved;
 
-        // around-the-world selection
         if (cursor_position < 0)
             cursor_position = 4;
         if (cursor_position > 4)
@@ -821,15 +887,14 @@ void OperatingMode(void)
         UpdateOperatingModeSelection();
     }
 
-    // screen progression logic
+    // Screen progression logic
     if (enter_pressed)
     {
-        // clear flag
         enter_pressed = 0;
+        touch_triggered = false; // SAFETY FIX: Drop flag completely before jumping screens
 
         if (cursor_position < 4)
         {
-            // preset selected
             entry_method = ENTRY_PRESET;
             PresetConfigs();
             current_screen = Screen_DisplayChannels;
@@ -837,7 +902,6 @@ void OperatingMode(void)
         }
         else
         {
-            // CUSTOM selected
             entry_method = ENTRY_CUSTOM;
             numberdisplays = 1;
             current_screen = Screen_NumberDisplays;
@@ -847,12 +911,14 @@ void OperatingMode(void)
     }
     else if (return_pressed)
     {
-        // clear flag
         return_pressed = 0;
+        touch_triggered = false; // SAFETY FIX: Drop flag completely before jumping screens
+
         current_screen = Screen_TouchDecision;
         cali = 0;
         cursor_position = 0;
         force_redraw = true;
+        TouchScreen_deinit();
     }
 }
 
@@ -936,48 +1002,41 @@ void ChannelSel(void)
         // won't trigger if touch is not detected, as values would be -1
         if (X_Cord > 0 && Y_Cord > 0)
         {
-            // can combine/group general sections via y coordinate, then hone in on section via x coordinate ?
-            // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
-            if (Display_Bounds_Check_Y(Y_Cord, NUMC_TRI_THRESH_Y_TOP, NUMC_TRI_THRESH_Y_H))
-            {
-                if (Display_Bounds_Check_X(X_Cord, NUMC_THRESH_X_LEFT_BOUND, NUMC_DEC_THRESH_X_W))
-                {
-                    b2_pressed = 1;
-                }
-                else if (Display_Bounds_Check_X(X_Cord, NUMC_INC_THRESH_X_LEFT, NUMC_INC_THRESH_X_W))
-                {
-                    b1_pressed = 1;
-                }
-            }
+            // Clean table definition using your NUMC thresholds
+            const TouchZone zones[] = {
+                // X_Start, Y_Start, Width, Height, Target Flag Pointer
+                {NUMC_THRESH_X_LEFT_BOUND, NUMC_TRI_THRESH_Y_TOP, NUMC_DEC_THRESH_X_W, NUMC_TRI_THRESH_Y_H, &b2_pressed},     // Decrease
+                {NUMC_INC_THRESH_X_LEFT, NUMC_TRI_THRESH_Y_TOP, NUMC_INC_THRESH_X_W, NUMC_TRI_THRESH_Y_H, &b1_pressed},       // Increase
+                {NUMC_THRESH_X_LEFT_BOUND, NUM_BUT_THRESH_Y_TOP, NUM_RET_THRESH_X_RIGH, NUM_BUT_THRESH_Y_H, &return_pressed}, // Return
+                {NUM_ENT_THRESH_X_LEFT, NUM_BUT_THRESH_Y_TOP, NUM_ENT_THRESH_X_W, NUM_BUT_THRESH_Y_H, &enter_pressed}         // Enter
+            };
 
-            else if (Display_Bounds_Check_Y(Y_Cord, NUM_BUT_THRESH_Y_TOP, NUM_BUT_THRESH_Y_H))
+            // Loop through the table and test each region
+            for (int i = 0; i < 4; i++)
             {
-                if (Display_Bounds_Check_X(X_Cord, NUMC_THRESH_X_LEFT_BOUND, NUM_RET_THRESH_X_RIGH))
+                if (Display_Bounds_Check_X(X_Cord, zones[i].x, zones[i].w) &&
+                    Display_Bounds_Check_Y(Y_Cord, zones[i].y, zones[i].h))
                 {
-                    return_pressed = 1;
-                }
-                else if (Display_Bounds_Check_X(X_Cord, NUM_ENT_THRESH_X_LEFT, NUM_ENT_THRESH_X_W))
-                {
-                    enter_pressed = 1;
+                    *(zones[i].button_flag) = 1; // Trip the corresponding global variable
+                    break;                       // Hit found, drop out of the loop
                 }
             }
         }
         WaitForTouchRelease();
         gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
     }
-    if (b1_pressed)
+
+    // Process increment / decrement step via delta math
+    int8_t change = b1_pressed - b2_pressed;
+    if (change != 0)
     {
-        numberchannels++;
-        value_changed = true;
-    }
-    if (b2_pressed)
-    {
-        numberchannels--;
+        numberchannels += change;
         value_changed = true;
     }
 
     if (value_changed)
     {
+        // Note: keeping your MAX_NUMBER_DISPLAYS bounds checking style from the original snippet
         numberchannels = (numberchannels > MAX_NUMBER_DISPLAYS) ? MIN_NUMBER_DISPLAYS : (numberchannels < MIN_NUMBER_DISPLAYS ? MAX_NUMBER_DISPLAYS : numberchannels);
         UpdateChannelSelection();
     }
@@ -985,6 +1044,8 @@ void ChannelSel(void)
     // if enter pressed, increment j_idx to go to next display
     if (enter_pressed)
     {
+        enter_pressed = 0; // Fix: Clear global flag immediately upon processing
+
         if (j_idx < numberdisplays)
         {
             j_idx++;
@@ -993,12 +1054,17 @@ void ChannelSel(void)
         }
         else
         {
+
+            touch_triggered = false;
+
             current_screen = Screen_DisplayChannels;
             force_redraw = true;
         }
     }
     else if (return_pressed)
     {
+        return_pressed = 0; // Fix: Clear global flag immediately upon processing
+
         if (j_idx > 1)
         {
             j_idx--;
@@ -1136,7 +1202,8 @@ void ActiveMetering(void)
             // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
             if (Display_Bounds_Check_Total(X_Cord, Y_Cord, 200, 0, 45, 30))
             {
-                return_pressed = 1;
+                // need to set timer return flag, not return_pressed = 1
+                timer_return_flag = 1;
             }
         }
     }
