@@ -60,7 +60,7 @@ void LCD_writeCommand(unsigned char cmd)
     LCD_PIN_LOW_CMD;    // D/C Low
     LCD_selectLCD();    // CS Low
     Lcd_Write_Bus(cmd); // Sends data
-    sleep_us(1);        // <--- ADD THIS TEMPORARY HACK HERE
+    sleep_us(1);        
     LCD_deselectLCD();  // CS High
 }
 
