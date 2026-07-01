@@ -44,6 +44,7 @@ add_executable(main
     TouchScreeninit.c
     UART.c
     Hardware.c
+    I2CExtension.c
     )
 
 pico_generate_pio_header(main ${CMAKE_CURRENT_LIST_DIR}/screen_spi.pio)
