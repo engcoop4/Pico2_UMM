@@ -69,6 +69,7 @@ target_link_libraries(main
         hardware_dma
         hardware_pio
         hardware_sync
+        hardware_i2c
         )
 
 # Add the standard include files to the build
