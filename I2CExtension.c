@@ -52,7 +52,8 @@ bool I2C_Init(void) {
     // 2. Step through each physical target chip sequentially
     uint8_t targets[3] = {ADDR_1, ADDR_2, ADDR_3};
     
-    for (int i = 0; i < 3; i++) {
+    // change to i < 3 when other I2Cs are added
+    for (int i = 0; i < 1; i++) {
         if (!configure_single_extender(targets[i])) {
             // Early exit if any chip fails to answer on the bus
             return false; 
@@ -98,4 +99,9 @@ bool I2C_LEDs(uint8_t led_index, bool turn_on) {
     }
 
     return true;
+}
+
+// need to implement interrupt so that the master is not constantly checking the slave for a button data change (and potentially missing it)
+bool I2C_Buttons(uint8_t button_index) {
+
 }

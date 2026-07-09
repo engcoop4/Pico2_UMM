@@ -12,6 +12,7 @@
 #include "Hardware.h"
 #include "Global.h"
 #include "font12x16.h"
+#include "I2CExtension.h"
 
 // Function for Display, Commands, and Touch Screen
 #include "AdafruitDisplayInits.h"
@@ -44,6 +45,26 @@ int main()
     // delay for USB
     sleep_ms(100);
 
+    if (!I2C_Init()) {
+        while (true) {
+            tight_loop_contents(); 
+        }
+    }
+
+    // 4. Infinite Test Loop: Cycles the LEDs purely in hardware
+    while (true) {
+        for (int i = 0; i < 4; i++) {
+            I2C_LEDs(i, true);  // Turn LED on
+            sleep_ms(200);
+            
+            I2C_LEDs(i, false); // Turn LED off
+            sleep_ms(100);
+        }
+        
+        // Brief 1-second pause before restarting the row sequence
+        sleep_ms(1000); 
+    }
+    /*
     PIO_Init();
     LEDs_Init();
     Buttons_Init();
@@ -88,4 +109,5 @@ int main()
 
         sleep_ms(1);
     }
+    */
 }

@@ -23,6 +23,12 @@
 #define ADDR_2 0x75
 #define ADDR_3 0x76
 
+// Button indexes
+#define BUTTON_0_PIN 4
+#define BUTTON_1_PIN 5
+#define BUTTON_2_PIN 6
+#define BUTTON_3_PIN 7
+
 // TCA9539 Internal Register Commands
 #define REG_INPUT_P0 0x00 // Read physical pin states
 #define REG_INPUT_P1 0X01
