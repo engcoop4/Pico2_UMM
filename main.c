@@ -37,33 +37,47 @@ const MainScreenFunction Screen_Options[9] = {
     [Screen_Metering] = DisplayChannels // safety precaution for 'InitializationDone'
 };
 
-int main()
-{
-    // core hardware
+int main() {
     stdio_init_all();
+    sleep_ms(100); // Small delay to let hardware stabilize
 
-    // delay for USB
-    sleep_ms(100);
-
+    // 1. Initialize our physical bus and configure the TCA9539
     if (!I2C_Init()) {
+        // Halt if the chip isn't responding
         while (true) {
-            tight_loop_contents(); 
+            tight_loop_contents();
         }
     }
 
-    // 4. Infinite Test Loop: Cycles the LEDs purely in hardware
-    while (true) {
-        for (int i = 0; i < 4; i++) {
-            I2C_LEDs(i, true);  // Turn LED on
-            sleep_ms(200);
-            
-            I2C_LEDs(i, false); // Turn LED off
-            sleep_ms(100);
-        }
-        
-        // Brief 1-second pause before restarting the row sequence
-        sleep_ms(1000); 
+    // 2. Clear any pending startup interrupt and turn off all LEDs
+    I2C_Buttons(0);
+    button_event_pending = false;
+    for (int i = 0; i < 4; i++) {
+        I2C_LEDs(i, false);
     }
+
+    while (true) {
+        // The Pico 2 sits idle here. Zero I2C traffic is happening!
+        
+        if (button_event_pending) {
+            // A tiny 5ms debounce window to let physical metal contacts settle
+            sleep_ms(5);
+
+            // Reset our software flag so the ISR can trip again on the next press/release
+            button_event_pending = false;
+
+            // Update each LED based on the live button states
+            for (uint8_t i = 0; i < 4; i++) {
+                bool is_pressed = I2C_Buttons(i);
+                I2C_LEDs(i, is_pressed);
+            }
+        }
+
+        // You are completely free to run other code here with zero overhead
+        tight_loop_contents();
+    }
+
+
     /*
     PIO_Init();
     LEDs_Init();

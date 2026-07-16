@@ -24,10 +24,10 @@
 #define ADDR_3 0x76
 
 // Button indexes
-#define BUTTON_0_PIN 4
-#define BUTTON_1_PIN 5
-#define BUTTON_2_PIN 6
-#define BUTTON_3_PIN 7
+#define BUTTON_0_PIN (1 << 4)
+#define BUTTON_1_PIN (1 << 5)
+#define BUTTON_2_PIN (1 << 6)
+#define BUTTON_3_PIN (1 << 7)
 
 // TCA9539 Internal Register Commands
 #define REG_INPUT_P0 0x00 // Read physical pin states
@@ -42,8 +42,14 @@
 #define REG_CONFIG_P0 0x06 // Configuration Port 0 (Input/Output select)
 #define REG_CONFIG_P1 0x07 // Configuration Port 1 (Input/Output select)
 
+#define PICO_I2C_INT 6
+
+extern volatile bool button_event_pending;
+
 static bool configure_single_extender(uint8_t address);
 bool I2C_Init(void);
 bool I2C_LEDs(uint8_t led_index, bool turn_on);
+bool I2C_Buttons(uint8_t button_index);
+static void gpio_interrupt_handler(uint gpio, uint32_t events);
 
 #endif /* I2C_EXTENSIONS_H */
