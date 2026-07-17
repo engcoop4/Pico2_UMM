@@ -79,7 +79,7 @@ bool I2C_Init(void)
         PICO_I2C_INT, 
         GPIO_IRQ_EDGE_FALL, 
         true, 
-        &gpio_interrupt_handler
+        &master_gpio_irq_dispatcher
     );
 
     return true;
@@ -132,46 +132,25 @@ bool I2C_LEDs(uint8_t led_index, bool turn_on)
 }
 
 // need to implement interrupt so that the master is not constantly checking the slave for a button data change (and potentially missing it)
-bool I2C_Buttons(uint8_t button_index)
+uint8_t I2C_ReadAllButtons(void)
 {
-    // Safety check: only buttons 0-3 are valid (corresponding to physical pins P04 - P07)
-    if (button_index > 3)
-        return false;
-
     uint8_t reg_addr = REG_INPUT_P0;
-    uint8_t raw_port_val = 0xFF; // Default to all High (unpressed) if read fails
+    uint8_t raw_port_val = 0xFF; // Default to all High (unpressed)
 
-    // 1. Tell the chip we want to read the Input Register of Port 0
-    // Reading this register automatically resets the physical /INT pin on the chip back to High!
+    // 1. Point to the Port 0 Input Register (resets physical /INT)
     if (i2c_write_blocking(I2C_PORT, ADDR_1, &reg_addr, 1, true) == PICO_ERROR_GENERIC)
     {
-        return false;
+        return 0; // Return 0 (no buttons pressed) on bus error
     }
 
-    // 2. Read the current 8-bit state of Port 0
+    // 2. Read the 8-bit state
     if (i2c_read_blocking(I2C_PORT, ADDR_1, &raw_port_val, 1, false) == PICO_ERROR_GENERIC)
     {
-        return false;
+        return 0;
     }
 
-    // 3. Map button_index (0-3) to its physical pin offset on Port 0 (P04-P07)
-    // button_index 0 -> P04, button_index 1 -> P05, etc.
-    uint8_t physical_pin_bit = button_index + 4; 
-    uint8_t button_mask = (1 << physical_pin_bit);
-
-    // 4. Apply our mask to isolate our target button. 
-    // Remember, physical buttons are Active-Low (Pressed = 0).
-    // So if the bit is 0, we want to return "true" (pressed).
-    if ((raw_port_val & button_mask) == 0)
-    {
-        return true;  // Button is physically pressed!
-    }
-    
-    return false; // Button is unpressed (or floating high)
-}
-
-static void gpio_interrupt_handler(uint gpio, uint32_t events) {
-    if (gpio == PICO_I2C_INT) {
-        button_event_pending = true;
-    }
+    // 3. Unpack bits 4-7, shift them down to bits 0-3, and invert 
+    // because the physical buttons are active-low (Pressed = 0).
+    uint8_t button_bits = (raw_port_val >> 4) & 0x0F;
+    return (~button_bits) & 0x0F; 
 }

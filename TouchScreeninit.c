@@ -55,11 +55,10 @@ void TouchScreeninit(void)
     gpio_disable_pulls(X_MINUS);
     gpio_disable_pulls(Y_PLUS);
 
-    // 2. Point the ADC at your Button Ladder (Channel 2)
-    adc_select_input(2);
+    // REMOVED: adc_select_input(2) is gone because the analog button ladder no longer exists!
 
-    // enable interrupts on Y- pin for touch detection
-    gpio_set_irq_enabled_with_callback(Y_MINUS, GPIO_IRQ_EDGE_FALL, true, &TouchInterrupt);
+    // Enable hardware interrupt on Y- pin without overwriting the shared callback
+    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
 }
 
 void TouchScreen_deinit(void)
@@ -88,9 +87,7 @@ void TouchScreen_deinit(void)
     gpio_disable_pulls(Y_PLUS);
     gpio_disable_pulls(Y_MINUS);
 
-    // restore button ADC input after disabling touch
-    adc_gpio_init(SWLADDER);
-    adc_select_input(2);
+    // CLEANED: Analog button ladder ADC selection and GPIO initialization removed here!
 }
 
 // slightly changes from msp430 architecture. rather than #pragma dictating the interrupt, the built in
@@ -106,22 +103,20 @@ void TouchInterrupt(uint gpio, uint32_t events)
         gpio_acknowledge_irq(gpio, events);
         return;
     }
-    // only act if the interrupt came from the Y_MINUS pin
-    if (gpio == Y_MINUS)
-    {
-        TouchInterrupt_Helper();
-        // set software flag
-        touch_triggered = 1;
 
-        // set to impossible values so it must read new coordinates each time (prevents false reads from "stale" coordinates)
-        X_Cord = -1;
-        Y_Cord = -1;
+    // Process touch detection (the dispatcher already verified this is Y_MINUS!)
+    TouchInterrupt_Helper();
+    
+    // Set your software flag for WaitForInput() to find
+    touch_triggered = 1;
 
-        // disable interrupt (equivalent to P1IE &= ~BIT0)
-        gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, false);
+    // Set to impossible values so it must read fresh coordinates
+    X_Cord = -1;
+    Y_Cord = -1;
 
-        // the Pico2 handles clearing clearing flags via the callback function (replaces P1IFG &~BIT0)
-    }
+    // Temporarily turn off the touch pin interrupt so it doesn't bounce 
+    // while we process this press in the main loop
+    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, false);
 }
 
 // used to re-initialize GPIOs to handle interrupt

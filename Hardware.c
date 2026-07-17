@@ -5,6 +5,8 @@
 #include "Global.h"
 #include "hardware/pio.h"
 #include "screen_spi.pio.h"
+#include "I2CExtension.h"
+#include "TouchScreeninit.h"
 
 #define RESET_THRESHOLD 300 // 3 seconds at 10ms intervals
 volatile uint32_t reset_hold_counter = 0;
@@ -105,4 +107,21 @@ void Command_Processing_Setup(void)
 
     current_screen = Screen_ControlsDisplay;
     force_redraw = true;
+}
+
+// The single, unified GPIO interrupt handler for Core 0
+void master_gpio_irq_dispatcher(uint gpio, uint32_t events)
+{
+    if (gpio == PICO_I2C_INT) 
+    {
+        // 1. Handle Button Expander Interrupt
+        button_event_pending = true;
+        // The SDK automatically handles clearing the Pico's internal GPIO flags,
+        // but remember: reading REG_INPUT_P0 later clears the TCA9539 hardware /INT line!
+    }
+    else if (gpio == Y_MINUS)
+    {
+        // 2. Handle Touch Screen Interrupt
+        TouchInterrupt(gpio, events);
+    }
 }

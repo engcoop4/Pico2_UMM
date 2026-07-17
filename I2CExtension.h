@@ -49,7 +49,7 @@ extern volatile bool button_event_pending;
 static bool configure_single_extender(uint8_t address);
 bool I2C_Init(void);
 bool I2C_LEDs(uint8_t led_index, bool turn_on);
-bool I2C_Buttons(uint8_t button_index);
-static void gpio_interrupt_handler(uint gpio, uint32_t events);
+uint8_t I2C_ReadAllButtons(void);
+void master_gpio_irq_dispatcher(uint gpio, uint32_t events);
 
 #endif /* I2C_EXTENSIONS_H */
