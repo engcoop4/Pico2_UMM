@@ -18,6 +18,8 @@
 #include "TouchScreeninit.h"
 #include "AdafruitDisplayInits.h"
 #include "Global.h"
+#include "I2CExtension.h"
+#include "hardware/watchdog.h"
 
 // touch_init = 1 for touch screen enabled
 // Set to 0 to disable touch screen testing until user enables it
@@ -628,113 +630,97 @@ void WaitForInput(void)
     enter_pressed = 0;
     return_pressed = 0;
 
-    // Check if the timer caught a return press
+    // Check if external timer flag caught a return press
     if (timer_return_flag)
     {
         return_pressed = 1;
-        timer_return_flag = false; // Consume the flag
+        timer_return_flag = false;
     }
 
+    // Touch priority check
     if (touch_triggered)
     {
         TouchDetection();
-        // Professional Touch Priority: If a touch happened,
-        // we can ignore any button presses that happened simultaneously.
         timer_return_flag = false;
     }
     else
     {
-        ButtonPolling(); // Now only handles Up, Down, and Enter
+        // Poll I2C buttons (handles Up, Down, Enter, Return, Hold-Repeat, Reboot)
+        I2C_ButtonPolling();
     }
-    // CursorFunction();
 }
 
 // handles button polling of WaitForInput (allows for removal of button logic in main WaitForInput)
-void ButtonPolling(void)
+void I2C_ButtonPolling(void)
 {
-    static bool lock_engaged = false;
-    
-    // Tracking variables for hold-and-repeat
-    static uint32_t button_press_start_time = 0;
+    static uint8_t last_button_state = 0;
+    static uint32_t up_down_press_start_time = 0;
     static uint32_t last_repeat_time = 0;
-    static uint8_t active_button = 0; // 0 = None, 1 = Up (b1), 2 = Down (b2)
+    static uint32_t return_press_start_time = 0;
+    static bool return_was_held = false;
 
-    adc_select_input(2);
-    uint16_t adc_val = adc_read();
     uint32_t current_time = to_ms_since_boot(get_absolute_time());
 
-    // --- CASE 1: NO BUTTON PRESSED (RELEASED) ---
-    if (adc_val < WFI_BUT_THRESH_NP)
+    // 1. If an I2C interrupt fired, read the latest button snapshot
+    if (button_event_pending)
     {
-        lock_engaged = false;
-        active_button = 0; // Clear hold tracking
-        return;
-    }
+        button_event_pending = false;
+        last_button_state = I2C_ReadAllButtons();
 
-    // --- CASE 2: REPEAT LOGIC FOR AN EXISTING HOLD ---
-    if (lock_engaged && active_button != 0)
-    {
-        // Re-verify the active button is still physically held down
-        // (Prevents noise or quick sliding across the ladder from locking an input)
-        bool button_still_held = false;
-        if (active_button == 1 && adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI) button_still_held = true;
-        if (active_button == 2 && adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI) button_still_held = true;
-
-        if (button_still_held)
+        // Detect initial press edge for RETURN button (Bit 2 = 0x04)
+        if ((last_button_state & 0x04) && !return_was_held)
         {
-            // Check if we've crossed the 1-second hold threshold
-            if ((current_time - button_press_start_time) >= HOLD_DELAY_MS)
-            {
-                // Throttle how fast it increments/decrements
-                if ((current_time - last_repeat_time) >= REPEAT_RATE_MS)
-                {
-                    if (active_button == 1) b1_pressed = 1;
-                    if (active_button == 2) b2_pressed = 1;
-                    
-                    last_repeat_time = current_time; // Reset repeat ticker
-                }
-            }
-            return; // Exit early, we handled the hold state
+            return_press_start_time = current_time;
+            return_was_held = true;
         }
-        else
-        {
-            // The button shifted or released slightly, break the hold tracking
-            active_button = 0;
-            lock_engaged = false;
-        }
-    }
 
-    // --- CASE 3: FRESH INITIAL PRESS ---
-    if (!lock_engaged && adc_val >= WFI_BUT_THRESH_P)
-    {
-        sleep_ms(5); // Debounce / SPI noise window
-        adc_val = adc_read();
-
-        if (adc_val >= WFI_BUT_ENTER_THRESH_P)
+        // Detect initial press edge for ENTER button (Bit 3 = 0x08)
+        if (last_button_state & 0x08)
         {
             enter_pressed = 1;
-            lock_engaged = true; // Enter doesn't auto-repeat
-            active_button = 0;
         }
-        else if (adc_val >= WFI_BUT_DOWN_THRESH_P_L && adc_val <= WFI_BUT_DOWN_THRESH_P_HI)
+
+        // Detect initial press edge for UP (Bit 0 = 0x01) or DOWN (Bit 1 = 0x02)
+        if (last_button_state & 0x03)
         {
-            b2_pressed = 1;
-            lock_engaged = true;
-            
-            // Start the hold tracking clock
-            active_button = 2;
-            button_press_start_time = current_time;
+            if (last_button_state & 0x01) b1_pressed = 1;
+            if (last_button_state & 0x02) b2_pressed = 1;
+
+            up_down_press_start_time = current_time;
             last_repeat_time = current_time;
         }
-        else if (adc_val >= WFI_BUT_UP_THRESH_P_L && adc_val <= WFI_BUT_UP_THRESH_P_HI)
+    }
+
+    // 2. Process RETURN button release / 3-second reboot check
+    if (return_was_held)
+    {
+        if (last_button_state & 0x04) // Return button is STILL held
         {
-            b1_pressed = 1;
-            lock_engaged = true;
-            
-            // Start the hold tracking clock
-            active_button = 1;
-            button_press_start_time = current_time;
-            last_repeat_time = current_time;
+            if ((current_time - return_press_start_time) >= RESET_HOLD_MS)
+            {
+                // 3 Seconds reached -> Instantly reboot system
+                watchdog_reboot(0, 0, 0);
+            }
+        }
+        else // Return button was RELEASED before 3 seconds
+        {
+            return_pressed = 1; // Standard Return navigation command
+            return_was_held = false;
+        }
+    }
+
+    // 3. Process UP / DOWN Hold-and-Repeat logic
+    if (last_button_state & 0x03) // Up or Down is active
+    {
+        if ((current_time - up_down_press_start_time) >= HOLD_DELAY_MS)
+        {
+            if ((current_time - last_repeat_time) >= REPEAT_RATE_MS)
+            {
+                if (last_button_state & 0x01) b1_pressed = 1; // Repeat UP
+                if (last_button_state & 0x02) b2_pressed = 1; // Repeat DOWN
+
+                last_repeat_time = current_time;
+            }
         }
     }
 }

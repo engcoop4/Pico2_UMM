@@ -40,7 +40,7 @@ void TouchScreeninit(void)
 
     adc_init();
 
-    // initialize GPIOs for touch screen
+    // 1. Set up touch GPIO directions & pull-ups (leaves X+/X- as outputs LOW for GND path)
     TouchInterrupt_Helper();
 
     busy_wait_ms(10);
@@ -48,16 +48,10 @@ void TouchScreeninit(void)
     adc_run(true); // Enable ADC
     CalibrateTouch();
 
-    gpio_set_dir(X_PLUS, GPIO_IN);
-    gpio_set_dir(X_MINUS, GPIO_IN);
-    gpio_set_dir(Y_PLUS, GPIO_IN);
-    gpio_disable_pulls(X_PLUS);
-    gpio_disable_pulls(X_MINUS);
-    gpio_disable_pulls(Y_PLUS);
+    // REMOVED: Do NOT change X_PLUS/X_MINUS back to GPIO_IN here!
+    // They must stay as outputs driven LOW so Y_MINUS can pull to GND on touch.
 
-    // REMOVED: adc_select_input(2) is gone because the analog button ladder no longer exists!
-
-    // Enable hardware interrupt on Y- pin without overwriting the shared callback
+    // 2. Enable hardware interrupt on Y- pin using our unified dispatcher
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
 }
 
@@ -124,19 +118,18 @@ void TouchInterrupt_Helper(void)
 {
     gpio_init(X_PLUS);
     gpio_init(X_MINUS);
-    adc_gpio_init(Y_PLUS); // Y+ needs to be ADC input for touch detection
+    adc_gpio_init(Y_PLUS); // Y+ ready as ADC input
     gpio_init(Y_MINUS);
 
-    // Set pins appropriately for touch detection
-    gpio_set_dir(X_PLUS, GPIO_OUT); // X+ as output (will be driven low)
+    // Set X+ and X- as outputs driven LOW to create the GND plane for touch detection
+    gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_put(X_PLUS, 0);
-    gpio_set_dir(X_MINUS, GPIO_OUT); // X- as output (will be driven low)
+
+    gpio_set_dir(X_MINUS, GPIO_OUT);
     gpio_put(X_MINUS, 0);
 
-    // Y+ is already ADC input from adc_gpio_init
-    gpio_set_dir(Y_MINUS, GPIO_IN); // Y- as input for interrupt
-
-    // Enable pull-up on Y- for touch detection
+    // Set Y- as input with pull-up to 3.3V
+    gpio_set_dir(Y_MINUS, GPIO_IN);
     gpio_pull_up(Y_MINUS);
 
     // Disable pulls on other pins

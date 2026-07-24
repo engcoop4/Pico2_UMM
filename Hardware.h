@@ -50,5 +50,6 @@ void LEDs_Init(void);
 bool timer_callback_reset_check(struct repeating_timer *t);
 void Return_Timer_Setup(void);
 void Command_Processing_Setup(void);
+void master_gpio_irq_dispatcher(uint gpio, uint32_t events);
 
 #endif /* HARDWARE_H_ */

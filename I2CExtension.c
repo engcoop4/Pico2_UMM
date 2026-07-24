@@ -19,7 +19,7 @@ static bool configure_single_extender(uint8_t address)
 {
     uint8_t buffer[2];
 
-    // 1. Force outputs high first to prevent active-low LED startup flash
+    // 1. Force outputs high first to prevent active-low LED startup flash (P00-P03)
     buffer[0] = REG_OUTPUT_P0;
     buffer[1] = 0xFF;
     if (i2c_write_blocking(I2C_PORT, address, buffer, 2, false) == PICO_ERROR_GENERIC)
@@ -27,17 +27,25 @@ static bool configure_single_extender(uint8_t address)
         return false;
     }
 
-    // 2. Set Port 0 Direction (P00-P03 Outputs, P04-P07 Inputs)
-    buffer[0] = REG_CONFIG_P0;
-    buffer[1] = 0xF0;
+    // 2. Set Port 0 Direction: P04-P07 Inputs (Buttons), P00-P03 Outputs (LEDs)
+    buffer[0] = REG_CONFIG_P0; // 0x06
+    buffer[1] = 0xF0;          // 0xF0 = Upper 4 pins Inputs, Lower 4 pins Outputs
     if (i2c_write_blocking(I2C_PORT, address, buffer, 2, false) == PICO_ERROR_GENERIC)
     {
         return false;
     }
 
-    // 3. Set Port 1 Direction (All Inputs for Blade IDs)
-    buffer[0] = REG_CONFIG_P1;
-    buffer[1] = 0xFF;
+    // 3. Invert Polarity on P04-P07 Button Inputs (Pressed = 1)
+    buffer[0] = REG_POL_OUT_P0; // 0x04
+    buffer[1] = 0xF0;            // Invert upper 4 bits
+    if (i2c_write_blocking(I2C_PORT, address, buffer, 2, false) == PICO_ERROR_GENERIC)
+    {
+        return false;
+    }
+
+    // 4. Set Port 1 Direction (All Inputs for Blade IDs)
+    buffer[0] = REG_CONFIG_P1; // 0x07
+    buffer[1] = 0xFF;          // All 8 pins as inputs
     if (i2c_write_blocking(I2C_PORT, address, buffer, 2, false) == PICO_ERROR_GENERIC)
     {
         return false;
@@ -134,23 +142,13 @@ bool I2C_LEDs(uint8_t led_index, bool turn_on)
 // need to implement interrupt so that the master is not constantly checking the slave for a button data change (and potentially missing it)
 uint8_t I2C_ReadAllButtons(void)
 {
-    uint8_t reg_addr = REG_INPUT_P0;
-    uint8_t raw_port_val = 0xFF; // Default to all High (unpressed)
+    uint8_t reg = REG_INPUT_P0; // 0x00
+    uint8_t raw_p0 = 0;
 
-    // 1. Point to the Port 0 Input Register (resets physical /INT)
-    if (i2c_write_blocking(I2C_PORT, ADDR_1, &reg_addr, 1, true) == PICO_ERROR_GENERIC)
-    {
-        return 0; // Return 0 (no buttons pressed) on bus error
-    }
+    i2c_write_blocking(I2C_PORT, ADDR_1, &reg, 1, true);
+    i2c_read_blocking(I2C_PORT, ADDR_1, &raw_p0, 1, false);
 
-    // 2. Read the 8-bit state
-    if (i2c_read_blocking(I2C_PORT, ADDR_1, &raw_port_val, 1, false) == PICO_ERROR_GENERIC)
-    {
-        return 0;
-    }
-
-    // 3. Unpack bits 4-7, shift them down to bits 0-3, and invert 
-    // because the physical buttons are active-low (Pressed = 0).
-    uint8_t button_bits = (raw_port_val >> 4) & 0x0F;
-    return (~button_bits) & 0x0F; 
+    // Shift P04-P07 down into lower 4 bits (Bits 0-3)
+    // Bit 0 = Up, Bit 1 = Down, Bit 2 = Return, Bit 3 = Enter
+    return (raw_p0 >> 4) & 0x0F;
 }

@@ -18,6 +18,10 @@
 
 #define HOLD_DELAY_MS 750  // 1 second before repeat starts
 #define REPEAT_RATE_MS 150 // Time between increments during hold (approx. 7 items/sec)
+#define RESET_HOLD_MS   3000  // Return button hold time for reboot (3 seconds)
+
+// --- Shared System Flags ---
+extern volatile bool button_event_pending;
 
 /* ---------- GRAPHICS PIXEL VALUES ---------- */
 /* ---------- KEY ---------- */
@@ -358,7 +362,7 @@ void PresetConfigs(void);
 void DisplayChannels(void);
 void InitYPositions(void);
 void WaitForInput(void);
-void ButtonPolling(void);
+void I2C_ButtonPolling(void);
 void TouchDetection(void);
 void UIDispatcher(void);
 void ControlsDisplay(void);
