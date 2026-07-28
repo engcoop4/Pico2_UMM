@@ -26,8 +26,8 @@
 
 #define CALI_BOUNDS_MIN_X 1000 // Low threshold for calibration (near 0V)
 #define CALI_BOUNDS_MIN_Y 1000
-#define CALI_BOUNDS_MAX_X 3000 // High threshold for calibration (near max voltage)
-#define CALI_BOUNDS_MAX_Y 3000
+#define CALI_BOUNDS_MAX_X 3200 // High threshold for calibration (near max voltage)
+#define CALI_BOUNDS_MAX_Y 3200
 
 #define CAPTURE_CALI_COORDS_SAMPLES 16
 

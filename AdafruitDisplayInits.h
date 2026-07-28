@@ -70,9 +70,10 @@ void Screen_Init(void);
 void Screen_Setup(void);
 
 uint16_t rgb888_to_rgb565(uint8_t, uint8_t, uint8_t, uint8_t *, uint8_t *);
+void rgb888_to_bytes(uint32_t color, uint8_t *r_byte, uint8_t *g_byte, uint8_t *b_byte);
 void setCursor(unsigned int, unsigned int, unsigned int, unsigned int);
 void format_color(uint32_t);
-void draw_pixel(unsigned int, unsigned int, uint32_t);
+void LCD_DrawPixel(unsigned int, unsigned int, uint32_t);
 void H_line(unsigned int, unsigned int, unsigned int, uint32_t);
 void V_line(unsigned int, unsigned int, unsigned int, uint32_t);
 void Rect(unsigned int, unsigned int, unsigned int, unsigned int, uint32_t);

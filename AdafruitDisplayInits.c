@@ -11,7 +11,7 @@ volatile int FLIP = 0;
 extern const uint8_t console_font_12x16[];
 
 // DMA display can be used when dealing with large areas (this is namely the "fill" functions such as LCD_Clear or Rectf)
-// functions like draw_pixel should NOT be DMA, this will actually take longer than letting the CPU handle it
+// functions like LCD_DrawPixel should NOT be DMA, this will actually take longer than letting the CPU handle it
 // functions like Rect (no fill) can go either way. opting to just use CPU so less code modifications required (subject to change)
 static int display_dma_chan = -1;
 
@@ -354,8 +354,21 @@ uint16_t rgb888_to_rgb565(uint8_t r, uint8_t g, uint8_t b, uint8_t *high_byte, u
     return color;
 }
 
+void rgb888_to_bytes(uint32_t color, uint8_t *r_byte, uint8_t *g_byte, uint8_t *b_byte)
+{
+    // Extract full 8-bit Red channel and mask it
+    *r_byte = (color >> 16) & 0xFF;
+
+    // Extract full 8-bit Green channel and mask it
+    *g_byte = (color >> 8) & 0xFF;
+
+    // Extract full 8-bit Blue channel and mask it
+    *b_byte = color & 0xFF;
+}
+
 void setCursor(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
 {
+#if defined(BOARD_TYPE_ADAFRUIT)
     unsigned int nx1 = (x1 * (1 - FLIP)) + ((239 - x1) * FLIP);
     unsigned int nx2 = (x2 * (1 - FLIP)) + ((239 - x2) * FLIP);
     unsigned int ny1 = (y1 * (1 - FLIP)) + ((319 - y1) * FLIP);
@@ -379,16 +392,55 @@ void setCursor(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y
     LCD_writeData(final_y_end & 0xFF);
 
     LCD_writeCommand(0x2c); // Memory Write
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    unsigned int nx1 = (x1 * (1 - FLIP)) + ((239 - x1) * FLIP);
+    unsigned int nx2 = (x2 * (1 - FLIP)) + ((239 - x2) * FLIP);
+    unsigned int ny1 = (y1 * (1 - FLIP)) + ((319 - y1) * FLIP);
+    unsigned int ny2 = (y2 * (1 - FLIP)) + ((319 - y2) * FLIP);
+
+    unsigned int final_x_start = (nx1 < nx2) ? nx1 : nx2;
+    unsigned int final_x_end = (nx1 > nx2) ? nx1 : nx2;
+    unsigned int final_y_start = (ny1 < ny2) ? ny1 : ny2;
+    unsigned int final_y_end = (ny1 > ny2) ? ny1 : ny2;
+
+    // 1. Column Address Set (Keep CS Low for all 5 bytes)
+    LCD_selectLCD();
+    LCD_PIN_LOW_CMD;
+    LCD_Write_Bus(0x2A);
+    LCD_PIN_HI_DATA;
+    LCD_Write_Bus(final_x_start >> 8);
+    LCD_Write_Bus(final_x_start & 0xFF);
+    LCD_Write_Bus(final_x_end >> 8);
+    LCD_Write_Bus(final_x_end & 0xFF);
+    LCD_deselectLCD();
+
+    // 2. Row Address Set (Keep CS Low for all 5 bytes)
+    LCD_selectLCD();
+    LCD_PIN_LOW_CMD;
+    LCD_Write_Bus(0x2B);
+    LCD_PIN_HI_DATA;
+    LCD_Write_Bus(final_y_start >> 8);
+    LCD_Write_Bus(final_y_start & 0xFF);
+    LCD_Write_Bus(final_y_end >> 8);
+    LCD_Write_Bus(final_y_end & 0xFF);
+    LCD_deselectLCD();
+
+    // 3. Open RAM Write Gates (0x2C)
+    // Send the command, but DO NOT drop CS here because LCD_Clear needs to stream pixels immediately next!
+    LCD_selectLCD();
+    LCD_PIN_LOW_CMD;
+    LCD_Write_Bus(0x2C);
+    // Leave CS Low and D/C state handled by the start of your loop
+#endif
 }
 
 void format_color(uint32_t color)
 {
-    // Extract RGB888 components from the 24-bit color integer
-    unsigned char r = (color >> 16) & 0xFF; // Red   (bits 16-23)
-    unsigned char g = (color >> 8) & 0xFF;  // Green (bits 8-15)
-    unsigned char b = color & 0xFF;         // Blue  (bits 0-7)
-
 #if defined(BOARD_TYPE_ADAFRUIT)
+
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
 
     // Convert RGB888 to RGB565 (2 Bytes)
     uint8_t high_byte, low_byte;
@@ -400,8 +452,11 @@ void format_color(uint32_t color)
 
 #elif defined(BOARD_TYPE_NEWHAVEN)
 
-    // Send full 24-bit RGB888 color directly (3 Bytes)
-    // (Note: Adjust byte order R-G-B if your specific NewHaven panel requires B-G-R)
+    // Extract 8-bit channels using helper
+    uint8_t r, g, b;
+    rgb888_to_bytes(color, &r, &g, &b);
+
+    // Stream full 24-bit RGB888 color directly (3 Bytes)
     LCD_writeData(r);
     LCD_writeData(g);
     LCD_writeData(b);
@@ -409,64 +464,93 @@ void format_color(uint32_t color)
 #endif
 }
 
-void draw_pixel(unsigned int x, unsigned int y, uint32_t color)
+void LCD_DrawPixel(unsigned int x, unsigned int y, uint32_t color)
 {
-    // 1. Set the area first (a 1x1 box at x,y)
+    // Bounds safety check (both panels are 240 x 320)
+    if (x >= 240 || y >= 320) return;
+
+    // 1. Set the 1x1 address window
     setCursor(x, y, x, y);
 
-    // 2. Tell the LCD we are about to send color data
+    // 2. Begin RAM Write command (0x2C is standard for both controllers)
     LCD_writeCommand(0x2C);
 
-    // 3. Send the color
+    // 3. Stream converted color bytes (Handles 16-bit vs 24-bit under the hood)
     format_color(color);
 }
 
-// Determines horizontal placement of pixel
 void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
-    // 1. Open a window that is exactly 1 pixel tall and 'l' pixels wide
+    if (l == 0) return;
+
+    // 1. Set address window (1 pixel tall, 'l' pixels wide)
     setCursor(x, y, x + l - 1, y);
 
-    // 2. Pre-convert color once
-    unsigned char r = (color >> 16) & 0xFF;
-    unsigned char g = (color >> 8) & 0xFF;
-    unsigned char b = color & 0xFF;
-    uint8_t high_byte, low_byte;
-    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
+#if defined(BOARD_TYPE_ADAFRUIT)
 
-    // 3. Fast stream
+    // Pre-convert 16-bit color bytes once outside the loop
+    uint8_t hi, lo;
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
+
+    // Stream 2 bytes per pixel
     for (unsigned int i = 0; i < l; i++)
     {
-        // NOTE: If your setCursor doesn't automatically send 0x2C,
-        // keep your LCD_writeCommand(0x2C) right here before the loop!
-        LCD_writeData(high_byte);
-        LCD_writeData(low_byte);
+        LCD_writeData(hi);
+        LCD_writeData(lo);
     }
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    // Pre-extract 24-bit color bytes once outside the loop
+    uint8_t r, g, b;
+    rgb888_to_bytes(color, &r, &g, &b);
+
+    // Stream 3 bytes per pixel
+    for (unsigned int i = 0; i < l; i++)
+    {
+        LCD_writeData(r);
+        LCD_writeData(g);
+        LCD_writeData(b);
+    }
+
+#endif
 }
 
-// Determines vertical placement of pixel - Needs to be flipped
 void V_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
-    // 1. Establish the vertical bounding box once (1 pixel wide, 'l' pixels tall)
-    // A vertical line starting at y with length 'l' spans from y to (y + l - 1)
+    if (l == 0) return;
+
+    // 1. Set address window (1 pixel wide, 'l' pixels tall)
     setCursor(x, y, x, y + l - 1);
 
-    // 2. CRITICAL OPTIMIZATION: Extract loop-invariant math
-    // Convert from RGB888 to RGB565 exactly once before streaming data
-    unsigned char r = (color >> 16) & 0xFF;
-    unsigned char g = (color >> 8) & 0xFF;
-    unsigned char b = color & 0xFF;
+#if defined(BOARD_TYPE_ADAFRUIT)
 
-    uint8_t high_byte, low_byte;
-    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
+    // Pre-convert 16-bit color bytes once outside the loop
+    uint8_t hi, lo;
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
 
-    // 3. Fast streaming loop with zero math inside
+    // Stream 2 bytes per pixel
     for (unsigned int i = 0; i < l; i++)
     {
-        // Bypass format_color overhead completely
-        LCD_writeData(high_byte);
-        LCD_writeData(low_byte);
+        LCD_writeData(hi);
+        LCD_writeData(lo);
     }
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    // Pre-extract 24-bit color bytes once outside the loop
+    uint8_t r, g, b;
+    rgb888_to_bytes(color, &r, &g, &b);
+
+    // Stream 3 bytes per pixel
+    for (unsigned int i = 0; i < l; i++)
+    {
+        LCD_writeData(r);
+        LCD_writeData(g);
+        LCD_writeData(b);
+    }
+
+#endif
 }
 
 // Draw the four sides of the rectangle - Needs to be flipped
@@ -478,27 +562,43 @@ void Rect(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint32
     V_line(x + w, y, h, color); // Right vertical line
 }
 
-// Fill a rectangle color (same color as border unless followed by Rect function) - Needs to be flipped
 void Rectf(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint32_t color)
 {
+    if (w == 0 || h == 0) return;
+
     // 1. Open ONE window for the entire multi-line block
     setCursor(x, y, x + w - 1, y + h - 1);
 
-    // 2. Pre-convert color once
-    unsigned char r = (color >> 16) & 0xFF;
-    unsigned char g = (color >> 8) & 0xFF;
-    unsigned char b = color & 0xFF;
-    uint8_t high_byte, low_byte;
-    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
-
     uint32_t total_pixels = (uint32_t)w * h;
 
-    // 3. Blistering fast uninterrupted pixel stream
+#if defined(BOARD_TYPE_ADAFRUIT)
+
+    // Pre-convert 16-bit color bytes once outside the loop
+    uint8_t hi, lo;
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
+
+    // Stream 2 bytes per pixel
     for (uint32_t i = 0; i < total_pixels; i++)
     {
-        LCD_writeData(high_byte);
-        LCD_writeData(low_byte);
+        LCD_writeData(hi);
+        LCD_writeData(lo);
     }
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    // Pre-extract 24-bit color bytes once outside the loop
+    uint8_t r, g, b;
+    rgb888_to_bytes(color, &r, &g, &b);
+
+    // Stream 3 bytes per pixel
+    for (uint32_t i = 0; i < total_pixels; i++)
+    {
+        LCD_writeData(r);
+        LCD_writeData(g);
+        LCD_writeData(b);
+    }
+
+#endif
 }
 
 // just outline
@@ -510,17 +610,17 @@ void Circle(unsigned int x, unsigned int y, unsigned int r, uint32_t color)
 
     while (y1 >= x1)
     {
-        draw_pixel(x - x1, y + y1, color);
-        draw_pixel(x + x1, y + y1, color);
+        LCD_DrawPixel(x - x1, y + y1, color);
+        LCD_DrawPixel(x + x1, y + y1, color);
 
-        draw_pixel(x - x1, y - y1, color);
-        draw_pixel(x + x1, y - y1, color);
+        LCD_DrawPixel(x - x1, y - y1, color);
+        LCD_DrawPixel(x + x1, y - y1, color);
 
-        draw_pixel(x - y1, y + x1, color);
-        draw_pixel(x + y1, y + x1, color);
+        LCD_DrawPixel(x - y1, y + x1, color);
+        LCD_DrawPixel(x + y1, y + x1, color);
 
-        draw_pixel(x - y1, y - x1, color);
-        draw_pixel(x + y1, y - x1, color);
+        LCD_DrawPixel(x - y1, y - x1, color);
+        LCD_DrawPixel(x + y1, y - x1, color);
 
         if (d < 0)
         {
@@ -595,6 +695,7 @@ void Circlef(unsigned int x, unsigned int y, unsigned int r, uint32_t color)
         x1++;
     }
 }
+
 void swap(int16_t *a, int16_t *b)
 {
     if (a == NULL || b == NULL)
@@ -635,11 +736,11 @@ void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color)
     {
         if (steep)
         {
-            draw_pixel(y0, x0, color);
+            LCD_DrawPixel(y0, x0, color);
         }
         else
         {
-            draw_pixel(x0, y0, color);
+            LCD_DrawPixel(x0, y0, color);
         }
         err -= dy;
         if (err < 0)
@@ -753,50 +854,75 @@ void Trianglef(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16
     }
 }
 
-// Draws individual characters
 void drawChar(int16_t x, int16_t y, unsigned char c,
               uint32_t color, uint32_t bg, uint8_t size_x,
               uint8_t size_y)
 {
     // 1. Calculate full block dimensions including scaling
-    // (Note: includes the 13th column spacer directly in the window)
     uint16_t total_width = 13 * size_x;
     uint16_t total_height = 16 * size_y;
 
     // 2. Set ONE bounding box window for the entire character block once
     setCursor(x, y, x + total_width - 1, y + total_height - 1);
 
+    // 3. Pre-extract foreground and background bytes for target target
+#if defined(BOARD_TYPE_ADAFRUIT)
+
+    uint8_t fg_hi, fg_lo;
+    uint8_t bg_hi, bg_lo;
+
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &fg_hi, &fg_lo);
+    rgb888_to_rgb565((bg >> 16) & 0xFF, (bg >> 8) & 0xFF, bg & 0xFF, &bg_hi, &bg_lo);
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    uint8_t fg_r, fg_g, fg_b;
+    uint8_t bg_r, bg_g, bg_b;
+
+    rgb888_to_bytes(color, &fg_r, &fg_g, &fg_b);
+    rgb888_to_bytes(bg, &bg_r, &bg_g, &bg_b);
+
+#endif
+
     int8_t i, j, sx, sy;
 
-    // 3. Loop through font rows sequentially
+    // 4. Loop through font rows sequentially
     for (j = 0; j < 16; j++)
     {
-        // Fetch and combine the two bytes for this row (12 active bits)
         uint8_t byte1 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2]);
         uint8_t byte2 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2 + 1]);
         uint16_t row = (byte1 << 8) | byte2;
 
-        // Duplicate the row to match the vertical scaling multiplier (size_y)
         for (sy = 0; sy < size_y; sy++)
         {
-            // Iterate through the 12 active columns
             for (i = 0; i < 12; i++)
             {
-                // Check if the current bit is a foreground or background pixel
                 bool is_fg = (row & (0x8000 >> i));
-                uint32_t pixel_color = is_fg ? color : bg;
 
-                // Duplicate the pixel to match the horizontal scaling multiplier (size_x)
                 for (sx = 0; sx < size_x; sx++)
                 {
-                    format_color(pixel_color); // Push directly to PIO FIFO
+#if defined(BOARD_TYPE_ADAFRUIT)
+                    LCD_writeData(is_fg ? fg_hi : bg_hi);
+                    LCD_writeData(is_fg ? fg_lo : bg_lo);
+#elif defined(BOARD_TYPE_NEWHAVEN)
+                    LCD_writeData(is_fg ? fg_r : bg_r);
+                    LCD_writeData(is_fg ? fg_g : bg_g);
+                    LCD_writeData(is_fg ? fg_b : bg_b);
+#endif
                 }
             }
 
-            // Push the 13th spacer column directly into the stream to fill out the window
+            // 13th column spacer (always background color)
             for (sx = 0; sx < size_x; sx++)
             {
-                format_color(bg);
+#if defined(BOARD_TYPE_ADAFRUIT)
+                LCD_writeData(bg_hi);
+                LCD_writeData(bg_lo);
+#elif defined(BOARD_TYPE_NEWHAVEN)
+                LCD_writeData(bg_r);
+                LCD_writeData(bg_g);
+                LCD_writeData(bg_b);
+#endif
             }
         }
     }
@@ -804,35 +930,59 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
 
 void LCD_Clear(uint32_t color)
 {
-    // 1. setCursor sends 0x2a, 0x2b, and 0x2c, handling its own CS tokens.
+    // 1. Set full screen bounds (handles its own CS internally)
     setCursor(0, 0, 239, 319);
 
-    // 2. NOW safely pull CS low again for the raw data streaming phase
+    // 2. Prepare hardware lines for raw data streaming phase
     LCD_PIN_HI_DATA;
     LCD_selectLCD();
-    sleep_us(5); // Small setup safety margin
+    sleep_us(5); // Setup safety margin
+
+    // 3. Prepare display-specific PIO words and byte counts
+#if defined(BOARD_TYPE_ADAFRUIT)
 
     uint8_t hi, lo;
     rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
 
-    uint32_t pio_hi = (uint32_t)hi << 24;
-    uint32_t pio_lo = (uint32_t)lo << 24;
+    uint32_t pio_words[2] = {
+        (uint32_t)hi << 24,
+        (uint32_t)lo << 24
+    };
+    const uint8_t bytes_per_pixel = 2;
 
-    // 3. Flood the PIO FIFO at raw speed
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    uint8_t r, g, b;
+    rgb888_to_bytes(color, &r, &g, &b);
+
+    uint32_t pio_words[3] = {
+        (uint32_t)r << 24,
+        (uint32_t)g << 24,
+        (uint32_t)b << 24
+    };
+    const uint8_t bytes_per_pixel = 3;
+
+#endif
+
+    // 4. Unified PIO Flood Loop (240 x 320 = 76,800 pixels)
     for (uint32_t i = 0; i < (240 * 320); i++)
     {
-        pio_sm_put_blocking(pio_global, sm_global, pio_hi);
-        pio_sm_put_blocking(pio_global, sm_global, pio_lo);
+        for (uint8_t b_idx = 0; b_idx < bytes_per_pixel; b_idx++)
+        {
+            pio_sm_put_blocking(pio_global, sm_global, pio_words[b_idx]);
+        }
     }
 
-    // 4. Wait for absolute completion before touching CS
-    // ... inside LCD_Clear after the massive for loop ...
+    // 5. Unified Completion Check
     while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global))
         ;
-    while (pio_sm_get_pc(pio_global, sm_global) != (offset + screen_spi_offset_entry_point))
+
+    while (pio_global->sm[sm_global].addr != (offset + screen_spi_offset_entry_point))
         ;
 
-    LCD_deselectLCD(); // 2. Watch how CS reacts relative to this spike
+    sleep_us(2); // Safety pad for final execution cycles
+
+    LCD_deselectLCD(); // Release Chip Select
 }
 
 void print(int16_t x, int16_t y, const char *str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width)
@@ -968,7 +1118,7 @@ int FindCenterX(int16_t x1, int16_t x2, const char *str, uint8_t font_size)
         {
             if (str[i] == ' ')
             {
-                int current_width = (10 * i) + (2 * (i - 1));
+                int current_width = font_size * FONT_WIDTH * i;
                 if (current_width < x2)
                 {
                     last_space = i;

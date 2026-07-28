@@ -632,7 +632,7 @@ void WaitForInput(void)
     if (touch_triggered)
     {
         TouchDetection();
-        timer_return_flag = false;
+        //timer_return_flag = false;
     }
     else
     {
@@ -1166,7 +1166,6 @@ void MeasureTouch(void)
 void ActiveMetering(void)
 {
     // 1. DATA ACQUISITION & DISPLAY
-    // Read your chip and update the LCD here
     // Run_Metering_Cycle();
 
     if (touch_triggered)
@@ -1175,20 +1174,18 @@ void ActiveMetering(void)
 
         if (X_Cord > 0 && Y_Cord > 0)
         {
-            // can combine/group general sections via y coordinate, then hone in on section via x coordinate ?
-            // i.e. triangle for touch detected between y 100 and y 225, then within that separate the x's
             if (Display_Bounds_Check_Total(X_Cord, Y_Cord, 200, 0, 45, 30))
             {
-                // need to set timer return flag, not return_pressed = 1
                 timer_return_flag = 1;
             }
         }
     }
 
-    // 2. CONTEXT-AWARE RETURN (Non-Blocking)
-    if (timer_return_flag)
+    // 2. CONTEXT-AWARE RETURN (Listens to BOTH touchscreen flag AND physical I2C return button)
+    if (timer_return_flag || return_pressed)
     {
-        timer_return_flag = false; // Consume the flag
+        timer_return_flag = false; // Clear both flags
+        return_pressed = 0;
 
         // Use logic to decide where to go back to
         if (entry_method == ENTRY_CUSTOM)
