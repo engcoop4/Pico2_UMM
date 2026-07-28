@@ -38,7 +38,7 @@ void LCD_delay(unsigned int ms)
 
 // 3. The Bus Write
 // This replaces your UCB1TXBUF and while(UCBUSY) logic
-void Lcd_Write_Bus(unsigned char d)
+void LCD_Write_Bus(unsigned char d)
 {
     // 1. Push data to the PIO
     pio_sm_put_blocking(pio_global, sm_global, (uint32_t)d << 24);
@@ -57,25 +57,71 @@ void Lcd_Write_Bus(unsigned char d)
 // 4. Send Command
 void LCD_writeCommand(unsigned char cmd)
 {
-    LCD_PIN_LOW_CMD;    // D/C Low
-    LCD_selectLCD();    // CS Low
-    Lcd_Write_Bus(cmd); // Sends data
-    sleep_us(1);        
-    LCD_deselectLCD();  // CS High
+#if defined(BOARD_TYPE_ADAFRUIT)
+    Adafruit_writeCmd(cmd);
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    NewHaven_writeCmd(cmd);
+#endif
 }
 
+void Adafruit_writeCmd(unsigned char cmd)
+{
+    LCD_PIN_LOW_CMD;    // D/C Low
+    LCD_selectLCD();    // CS Low
+    LCD_Write_Bus(cmd); // Sends data
+    sleep_us(1);
+    LCD_deselectLCD(); // CS High
+}
+
+void NewHaven_writeCmd(unsigned char cmd)
+{
+    LCD_PIN_LOW_CMD;    // D/C Low
+    LCD_selectLCD();    // CS Low
+    LCD_Write_Bus(cmd); // Sends data
+    sleep_us(2);        // Hold time before deasserting CS
+    LCD_deselectLCD();  // CS High
+    sleep_us(5);        // <--- CRITICAL: Give the display's SPI engine time to breathe!
+}
 // 5. Send Data
 void LCD_writeData(unsigned char data)
 {
+#if defined(BOARD_TYPE_ADAFRUIT)
+    Adafruit_writeData(data);
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    NewHaven_writeData(data);
+#endif
+}
+
+void Adafruit_writeData(unsigned char data)
+{
     LCD_PIN_HI_DATA; // RS/DC = 1 (Macro from Hardware.h)
     LCD_selectLCD(); // CS = 0
-    Lcd_Write_Bus(data);
+    LCD_Write_Bus(data);
     sleep_us(1);
     LCD_deselectLCD(); // CS = 1
 }
 
+void NewHaven_writeData(unsigned char data)
+{
+    LCD_PIN_HI_DATA; // RS/DC = 1
+    LCD_selectLCD(); // CS = 0
+    LCD_Write_Bus(data);
+    sleep_us(2);       // Hold time before deasserting CS
+    LCD_deselectLCD(); // CS = 1
+    sleep_us(5);       // <--- CRITICAL: Give the display's SPI engine time to breathe!
+}
+
 // ripped directly from CCS
-void Lcd_Init(void)
+void Screen_Init(void)
+{
+#if defined(BOARD_TYPE_ADAFRUIT)
+    Adafruit_Init();
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    NewHaven_Init();
+#endif
+}
+
+void Adafruit_Init(void)
 {
     RESETUP;
     LCD_delay(15);
@@ -157,6 +203,138 @@ void Lcd_Init(void)
     //    CSUP;
 }
 
+void NewHaven_Init(void)
+{
+    // Wake up driver core
+    LCD_writeCommand(0x11); // Sleep Out (SLPOUT)
+    sleep_ms(120);
+
+    // Memory Data Access Control (MADCTL)
+    LCD_writeCommand(0x36);
+    LCD_writeData(0x80);
+
+    // Interface Pixel Format (COLMOD) -> 18-bit serial SPI formatting
+    LCD_writeCommand(0x3A);
+    LCD_writeData(0x06);
+
+    // Display Inversion On (INVON)
+    LCD_writeCommand(0x21);
+
+    // --- CLEANLY FRAMED CONFIGURATION BLOCKS ---
+    // Porch Setting (0xB2)
+    LCD_writeCommand(0xB2);
+    LCD_writeData(0x0C);
+    LCD_writeData(0x0C);
+    LCD_writeData(0x00);
+    LCD_writeData(0x33);
+    LCD_writeData(0x33);
+
+    // Gate Control (0xB7)
+    LCD_writeCommand(0xB7);
+    LCD_writeData(0x35);
+
+    // VCOM Setting (0xBB)
+    LCD_writeCommand(0xBB);
+    LCD_writeData(0x2B);
+
+    // LCM Control (0xC0)
+    LCD_writeCommand(0xC0);
+    LCD_writeData(0x2C);
+
+    // VDV and VRH Command Enable (0xC2)
+    LCD_writeCommand(0xC2);
+    LCD_writeData(0x01);
+    LCD_writeData(0xFF);
+
+    // VRH Set (0xC3)
+    LCD_writeCommand(0xC3);
+    LCD_writeData(0x11);
+
+    // VDV Set (0xC4)
+    LCD_writeCommand(0xC4);
+    LCD_writeData(0x20);
+
+    // Frame Rate Control in Normal Mode (0xC6)
+    LCD_writeCommand(0xC6);
+    LCD_writeData(0x0F);
+
+    // Power Control 1 (0xD0)
+    LCD_writeCommand(0xD0);
+    LCD_writeData(0xA4);
+    LCD_writeData(0xA1);
+
+    // Positive Voltage Gamma Control (0xE0)
+    LCD_writeCommand(0xE0);
+    LCD_writeData(0xD0);
+    LCD_writeData(0x00);
+    LCD_writeData(0x05);
+    LCD_writeData(0x0E);
+    LCD_writeData(0x15);
+    LCD_writeData(0x0D);
+    LCD_writeData(0x37);
+    LCD_writeData(0x43);
+    LCD_writeData(0x47);
+    LCD_writeData(0x09);
+    LCD_writeData(0x15);
+    LCD_writeData(0x01);
+    LCD_writeData(0x16);
+    LCD_writeData(0x19);
+
+    // Negative Voltage Gamma Control (0xE1)
+    LCD_writeCommand(0xE1);
+    LCD_writeData(0xD0);
+    LCD_writeData(0x00);
+    LCD_writeData(0x05);
+    LCD_writeData(0x0D);
+    LCD_writeData(0x0C);
+    LCD_writeData(0x06);
+    LCD_writeData(0x2D);
+    LCD_writeData(0x44);
+    LCD_writeData(0x40);
+    LCD_writeData(0x0E);
+    LCD_writeData(0x1C);
+    LCD_writeData(0x18);
+    LCD_writeData(0x16);
+    LCD_writeData(0x19);
+
+    // Set Default Address Boundaries to Full Screen
+    setCursor(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+
+    // Final Core Wake Activation Commands
+    LCD_writeCommand(0x13); // Normal Display Mode On (NORON)
+    sleep_ms(10);
+
+    LCD_writeCommand(0x29); // Main Display Engine On (DISPON)
+    sleep_ms(50);
+}
+
+void Screen_Setup(void)
+{
+#if defined(BOARD_TYPE_ADAFRUIT)
+    Adafruit_Setup();
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    NewHaven_Setup();
+#endif
+}
+
+void Adafruit_Setup(void)
+{
+    RSUP;
+    RESETUP;
+
+    Screen_Init();
+    LCD_Clear(BLACK);
+}
+
+void NewHaven_Setup(void)
+{
+    RSUP;
+    RESETUP;
+
+    NewHaven_Init();
+    LCD_Clear(BLACK);
+}
+
 uint16_t rgb888_to_rgb565(uint8_t r, uint8_t g, uint8_t b, uint8_t *high_byte, uint8_t *low_byte)
 {
     uint16_t color = 0;
@@ -205,18 +383,30 @@ void setCursor(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y
 
 void format_color(uint32_t color)
 {
-    // Extract the RGB components from the 24-bit color integer
-    unsigned char r = (color >> 16) & 0xFF; // Extract Red (bits 16-23)
-    unsigned char g = (color >> 8) & 0xFF;  // Extract Green (bits 8-15)
-    unsigned char b = color & 0xFF;         // Extract Blue (bits 0-7)
+    // Extract RGB888 components from the 24-bit color integer
+    unsigned char r = (color >> 16) & 0xFF; // Red   (bits 16-23)
+    unsigned char g = (color >> 8) & 0xFF;  // Green (bits 8-15)
+    unsigned char b = color & 0xFF;         // Blue  (bits 0-7)
 
-    // Convert from RGB888 to RGB565 and store in high_byte, low_byte
+#if defined(BOARD_TYPE_ADAFRUIT)
+
+    // Convert RGB888 to RGB565 (2 Bytes)
     uint8_t high_byte, low_byte;
     rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
 
-    // Write the converted color data to the LCD
+    // Stream 16-bit color bytes over PIO/SPI
     LCD_writeData(high_byte);
     LCD_writeData(low_byte);
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    // Send full 24-bit RGB888 color directly (3 Bytes)
+    // (Note: Adjust byte order R-G-B if your specific NewHaven panel requires B-G-R)
+    LCD_writeData(r);
+    LCD_writeData(g);
+    LCD_writeData(b);
+
+#endif
 }
 
 void draw_pixel(unsigned int x, unsigned int y, uint32_t color)
@@ -408,7 +598,7 @@ void Circlef(unsigned int x, unsigned int y, unsigned int r, uint32_t color)
 void swap(int16_t *a, int16_t *b)
 {
     if (a == NULL || b == NULL)
-        return; // Safety check
+        return;
     int temp = *a;
     *a = *b;
     *b = temp;
@@ -609,17 +799,6 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
                 format_color(bg);
             }
         }
-    }
-}
-
-// claim unused dma channel
-void LCD_DMA_Init()
-{
-    // Only claim a channel if we haven't already
-    if (display_dma_chan == -1)
-    {
-        display_dma_chan = dma_claim_unused_channel(true);
-        // Now display_dma_chan might be 0, 1, or 2... no longer -1!
     }
 }
 

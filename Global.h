@@ -17,6 +17,18 @@
 // recommended "sweet spot" is 50, but can be modified later down the line
 #define LCD_UPDATE_INTERVAL 50
 
+// switch between BOARD_TYPE_ADAFRUIT and BOARD_TYPE_NEWHAVEN depending on which device is wired
+#define BOARD_TYPE_ADAFRUIT
+//#define BOARD_TYPE_NEWHAVEN
+
+#if defined(BOARD_TYPE_ADAFRUIT) && defined(BOARD_TYPE_NEWHAVEN)
+    #error "Multiple display boards defined! Please define only one in Global.h."
+#endif
+
+#if !defined(BOARD_TYPE_ADAFRUIT) && !defined(BOARD_TYPE_NEWHAVEN)
+    #error "No display board defined! Please define BOARD_ADAFRUIT or BOARD_NEWHAVEN in Global.h."
+#endif
+
 #define GUI_OUTPUT_LINES 7 // max number of displays is 7
 #define NUM_SD24_ADC_CHANNELS 7
 

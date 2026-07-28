@@ -52,7 +52,7 @@ int main()
     TouchScreeninit();
 
     LCDinit();
-    LCDSetup();
+    Screen_Setup();
     
     Return_Timer_Setup();
     

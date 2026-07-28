@@ -8,6 +8,7 @@
 /*===============================================*/
 /*                GENERAL COLORS                 */
 /*===============================================*/
+// keep everything in 24-bit format and for Adafruit call function rgb888_to_rgb565 to convert to 16-bit, and then for NewHaven use 24-bit
 #define FPROC 16000000
 #define WHITE 0xFFFFFF
 #define BLACK 0x000000
@@ -45,18 +46,29 @@
 #define MAGENTA 0xFF00FF
 #define PURPLE 0x4B0082
 
+/*===============================================*/
+/*                FONT CONSTANTS                 */
+/*===============================================*/
+
 #define FONT_WIDTH 12  // 12 pixels wide per character
 #define FONT_HEIGHT 16 // 16 pixels tall per character
 #define COL_SPACING 8
 #define ROW_SPACING 6
+#define SCREEN_WIDTH 240
+#define SCREEN_HEIGHT 320
 
+/*===============================================*/
+/*           FUNCTION NAMES (SHARED)             */
+/*===============================================*/
 void LCD_selectLCD(void);
 void LCD_deselectLCD();
 void LCD_delay(unsigned int);
-void Lcd_Write_Bus(unsigned char);
+void LCD_Write_Bus(unsigned char);
 void LCD_writeCommand(unsigned char);
 void LCD_writeData(unsigned char);
-void Lcd_Init(void);
+void Screen_Init(void);
+void Screen_Setup(void);
+
 uint16_t rgb888_to_rgb565(uint8_t, uint8_t, uint8_t, uint8_t *, uint8_t *);
 void setCursor(unsigned int, unsigned int, unsigned int, unsigned int);
 void format_color(uint32_t);
@@ -72,12 +84,31 @@ void drawLine(int16_t, int16_t, int16_t, int16_t, uint32_t);
 void Triangle(int16_t, int16_t, int16_t, int16_t, int16_t, int16_t, uint32_t);
 void Trianglef(int16_t, int16_t, int16_t, int16_t, int16_t, int16_t, uint32_t);
 void drawChar(int16_t, int16_t, unsigned char, uint32_t, uint32_t, uint8_t, uint8_t);
-void LCD_DMA_Init();
+
 void LCD_Clear(uint32_t);
 void print(int16_t, int16_t, const char *, uint32_t, uint32_t, uint8_t, uint8_t, uint16_t);
 void print_centered(int16_t, const char *, uint32_t, uint32_t, uint8_t, uint8_t, uint16_t);
 int FindCenterX(int16_t, int16_t, const char *, uint8_t);
 int FindCenterY(int16_t, int16_t, const char *, uint8_t);
+
+/*===============================================*/
+/*          FUNCTION NAMES (ADAFRUIT)            */
+/*===============================================*/
+#if defined(BOARD_TYPE_ADAFRUIT)
+    void Adafruit_Init(void);
+    void Adafruit_Setup(void);
+    void Adafruit_writeData(unsigned char data);
+    void Adafruit_writeCmd(unsigned char cmd);
+
+/*===============================================*/
+/*          FUNCTION NAMES (NEWHAVEN)            */
+/*===============================================*/
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    void NewHaven_Init(void);
+    void NewHaven_Setup(void);
+    void NewHaven_writeData(unsigned char data);
+    void NewHaven_writeCmd(unsigned char cmd);
+#endif
 
 extern volatile int FLIP;
 

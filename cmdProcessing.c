@@ -1118,7 +1118,7 @@ void RefreshLCDScreen()
 
     // 2. Re-initialize the LCD driver registers
     lcd_change = 1;
-    LCDSetup(); // Ensure this function now uses your new SPI/I2C Pico drivers
+    Screen_Setup(); // Ensure this function now uses your new SPI/I2C Pico drivers
 
     // 3. Redraw the UI
     if (current_screen == Screen_Metering)
@@ -1139,10 +1139,7 @@ void FlipScreen()
     // Clear the software cache to ensure a full redraw in the new orientation
     InvalidateLCDCache();
 
-    // Re-initialize the LCD.
-    // Your LCDSetup() must check the FLIP variable to send the
-    // correct MADCTL (Memory Access Control) register value.
-    LCDSetup();
+    Screen_Setup();
 
     if (current_screen == Screen_Metering)
     {

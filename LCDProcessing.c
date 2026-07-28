@@ -145,15 +145,6 @@ const WFI_ScreenFunction Screen_Changes[9] = {
 };
 
 //------------------------------------------------------------------------------------------LCD GRAPHIC DISPLAY-----------------------------------------------------------------------------------------------------------
-void LCDSetup(void)
-{
-    RSUP;
-    RESETUP;
-
-    Lcd_Init();
-    LCD_Clear(BLACK);
-}
-
 void ButtonLayout(void)
 {
     // Controlled by SW1
