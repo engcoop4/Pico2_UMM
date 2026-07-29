@@ -58,40 +58,6 @@ int main()
     
     Command_Processing_Setup();
 
-    while(true) {
-        LCD_Clear(BLACK);
-        sleep_ms(100);
-        LCD_Clear(WHITE);
-        sleep_ms(100);
-        H_line(0, 0, 120, BLACK);
-        sleep_ms(100);
-        H_line(0, 10, 120, RED);
-        sleep_ms(100);
-        H_line(0, 20, 120, PURPLE);
-        sleep_ms(100);
-        V_line(0, 40, 30, CYAN);
-        sleep_ms(100);
-        V_line(20, 40, 30, ORANGE);
-        sleep_ms(100);
-        V_line(40, 40, 30, NAVY_BLUE);
-        sleep_ms(100);
-        Rect(10, 80, 10, 10, BROWN);
-        sleep_ms(100);
-        Rectf(10, 95, 10, 10, ORANYEL);
-        sleep_ms(100);
-        Circle(10, 120, 50, PURPLE);
-        sleep_ms(100);
-        Circlef(150, 180, 50, MAGENTA);
-        sleep_ms(100);
-        Triangle(20, 245, 70, 245, 45, 290, GREEN);
-        sleep_ms(100);
-        Trianglef(80, 245, 130, 245, 105, 290, LIGHT_GREY);
-        sleep_ms(100);
-        print(30, 300, "TEST TEST TEST", YELLOW, WHITE, 1, 1, 240);
-        sleep_ms(500);
-    }
-
-    /*
     while (true)
     {
         // 4. Feed the Watchdog continuously
@@ -132,5 +98,5 @@ int main()
 
         sleep_ms(1);
     }
-        */
+
 }
