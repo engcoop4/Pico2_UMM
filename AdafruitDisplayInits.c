@@ -50,7 +50,7 @@ void LCD_Write_Bus(unsigned char d)
     // 3. Wait for the Program Counter (PC) to return to the entry point.
     // This confirms the state machine has finished the 8-bit loop
     // and is now stalling/waiting for new data.
-    while (pio_sm_get_pc(pio_global, sm_global) != (offset + screen_spi_offset_entry_point))
+    while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset()))
         ;
 }
 
@@ -211,7 +211,7 @@ void NewHaven_Init(void)
 
     // Memory Data Access Control (MADCTL)
     LCD_writeCommand(0x36);
-    LCD_writeData(0x80);
+    LCD_writeData(0xC0);
 
     // Interface Pixel Format (COLMOD) -> 18-bit serial SPI formatting
     LCD_writeCommand(0x3A);
@@ -434,40 +434,30 @@ void setCursor(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y
 #endif
 }
 
-void format_color(uint32_t color)
+static inline void format_color(uint32_t color)
 {
 #if defined(BOARD_TYPE_ADAFRUIT)
+    uint8_t hi, lo;
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)hi << 24);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)lo << 24);
 
+#elif defined(BOARD_TYPE_NEWHAVEN)
     uint8_t r = (color >> 16) & 0xFF;
     uint8_t g = (color >> 8) & 0xFF;
     uint8_t b = color & 0xFF;
 
-    // Convert RGB888 to RGB565 (2 Bytes)
-    uint8_t high_byte, low_byte;
-    rgb888_to_rgb565(r, g, b, &high_byte, &low_byte);
-
-    // Stream 16-bit color bytes over PIO/SPI
-    LCD_writeData(high_byte);
-    LCD_writeData(low_byte);
-
-#elif defined(BOARD_TYPE_NEWHAVEN)
-
-    // Extract 8-bit channels using helper
-    uint8_t r, g, b;
-    rgb888_to_bytes(color, &r, &g, &b);
-
-    // Stream full 24-bit RGB888 color directly (3 Bytes)
-    LCD_writeData(r);
-    LCD_writeData(g);
-    LCD_writeData(b);
-
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)r << 24);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)g << 24);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)b << 24);
 #endif
 }
 
 void LCD_DrawPixel(unsigned int x, unsigned int y, uint32_t color)
 {
     // Bounds safety check (both panels are 240 x 320)
-    if (x >= 240 || y >= 320) return;
+    if (x >= 240 || y >= 320)
+        return;
 
     // 1. Set the 1x1 address window
     setCursor(x, y, x, y);
@@ -481,7 +471,8 @@ void LCD_DrawPixel(unsigned int x, unsigned int y, uint32_t color)
 
 void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
-    if (l == 0) return;
+    if (l == 0)
+        return;
 
     // 1. Set address window (1 pixel tall, 'l' pixels wide)
     setCursor(x, y, x + l - 1, y);
@@ -518,7 +509,8 @@ void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 
 void V_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
 {
-    if (l == 0) return;
+    if (l == 0)
+        return;
 
     // 1. Set address window (1 pixel wide, 'l' pixels tall)
     setCursor(x, y, x, y + l - 1);
@@ -562,43 +554,54 @@ void Rect(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint32
     V_line(x + w, y, h, color); // Right vertical line
 }
 
-void Rectf(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint32_t color)
-{
-    if (w == 0 || h == 0) return;
-
-    // 1. Open ONE window for the entire multi-line block
+void Rectf(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint32_t color) {
+    // 1. Set bounding window ONCE for the entire box area
     setCursor(x, y, x + w - 1, y + h - 1);
+
+    LCD_PIN_HI_DATA;
+    LCD_selectLCD();
 
     uint32_t total_pixels = (uint32_t)w * h;
 
 #if defined(BOARD_TYPE_ADAFRUIT)
 
-    // Pre-convert 16-bit color bytes once outside the loop
     uint8_t hi, lo;
     rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
 
-    // Stream 2 bytes per pixel
-    for (uint32_t i = 0; i < total_pixels; i++)
-    {
-        LCD_writeData(hi);
-        LCD_writeData(lo);
+    uint32_t phi = (uint32_t)hi << 24;
+    uint32_t plo = (uint32_t)lo << 24;
+
+    // Stream 2 bytes per pixel for RGB565
+    for (uint32_t i = 0; i < total_pixels; i++) {
+        pio_sm_put_blocking(pio_global, sm_global, phi);
+        pio_sm_put_blocking(pio_global, sm_global, plo);
     }
 
 #elif defined(BOARD_TYPE_NEWHAVEN)
 
-    // Pre-extract 24-bit color bytes once outside the loop
-    uint8_t r, g, b;
-    rgb888_to_bytes(color, &r, &g, &b);
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
 
-    // Stream 3 bytes per pixel
-    for (uint32_t i = 0; i < total_pixels; i++)
-    {
-        LCD_writeData(r);
-        LCD_writeData(g);
-        LCD_writeData(b);
+    uint32_t pr = (uint32_t)r << 24;
+    uint32_t pg = (uint32_t)g << 24;
+    uint32_t pb = (uint32_t)b << 24;
+
+    // Stream 3 bytes per pixel for RGB888
+    for (uint32_t i = 0; i < total_pixels; i++) {
+        pio_sm_put_blocking(pio_global, sm_global, pr);
+        pio_sm_put_blocking(pio_global, sm_global, pg);
+        pio_sm_put_blocking(pio_global, sm_global, pb);
     }
 
 #endif
+
+    // Completion check using the target-specific entry offset
+    while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global)) ;
+    while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset())) ;
+    sleep_us(10);
+
+    LCD_deselectLCD();
 }
 
 // just outline
@@ -862,10 +865,14 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
     uint16_t total_width = 13 * size_x;
     uint16_t total_height = 16 * size_y;
 
-    // 2. Set ONE bounding box window for the entire character block once
+    // 2. Set ONE bounding box window for the entire character block
     setCursor(x, y, x + total_width - 1, y + total_height - 1);
 
-    // 3. Pre-extract foreground and background bytes for target target
+    // 3. Prepare display CS and DC lines for raw data phase
+    LCD_PIN_HI_DATA;
+    LCD_selectLCD();
+
+    // 4. Pre-shift 32-bit words for direct PIO FIFO pushes
 #if defined(BOARD_TYPE_ADAFRUIT)
 
     uint8_t fg_hi, fg_lo;
@@ -873,6 +880,11 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
 
     rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &fg_hi, &fg_lo);
     rgb888_to_rgb565((bg >> 16) & 0xFF, (bg >> 8) & 0xFF, bg & 0xFF, &bg_hi, &bg_lo);
+
+    uint32_t p_fg_hi = (uint32_t)fg_hi << 24;
+    uint32_t p_fg_lo = (uint32_t)fg_lo << 24;
+    uint32_t p_bg_hi = (uint32_t)bg_hi << 24;
+    uint32_t p_bg_lo = (uint32_t)bg_lo << 24;
 
 #elif defined(BOARD_TYPE_NEWHAVEN)
 
@@ -882,11 +894,19 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
     rgb888_to_bytes(color, &fg_r, &fg_g, &fg_b);
     rgb888_to_bytes(bg, &bg_r, &bg_g, &bg_b);
 
+    uint32_t p_fg_r = (uint32_t)fg_r << 24;
+    uint32_t p_fg_g = (uint32_t)fg_g << 24;
+    uint32_t p_fg_b = (uint32_t)fg_b << 24;
+
+    uint32_t p_bg_r = (uint32_t)bg_r << 24;
+    uint32_t p_bg_g = (uint32_t)bg_g << 24;
+    uint32_t p_bg_b = (uint32_t)bg_b << 24;
+
 #endif
 
     int8_t i, j, sx, sy;
 
-    // 4. Loop through font rows sequentially
+    // 5. Loop through font rows
     for (j = 0; j < 16; j++)
     {
         uint8_t byte1 = pgm_read_byte(&console_font_12x16[c * 32 + j * 2]);
@@ -895,19 +915,20 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
 
         for (sy = 0; sy < size_y; sy++)
         {
+            // Stream the 12 font columns
             for (i = 0; i < 12; i++)
             {
-                bool is_fg = (row & (0x8000 >> i));
+                bool is_fg = (row & (0x8000 >> i)) != 0;
 
                 for (sx = 0; sx < size_x; sx++)
                 {
 #if defined(BOARD_TYPE_ADAFRUIT)
-                    LCD_writeData(is_fg ? fg_hi : bg_hi);
-                    LCD_writeData(is_fg ? fg_lo : bg_lo);
+                    pio_sm_put_blocking(pio_global, sm_global, is_fg ? p_fg_hi : p_bg_hi);
+                    pio_sm_put_blocking(pio_global, sm_global, is_fg ? p_fg_lo : p_bg_lo);
 #elif defined(BOARD_TYPE_NEWHAVEN)
-                    LCD_writeData(is_fg ? fg_r : bg_r);
-                    LCD_writeData(is_fg ? fg_g : bg_g);
-                    LCD_writeData(is_fg ? fg_b : bg_b);
+                    pio_sm_put_blocking(pio_global, sm_global, is_fg ? p_fg_r : p_bg_r);
+                    pio_sm_put_blocking(pio_global, sm_global, is_fg ? p_fg_g : p_bg_g);
+                    pio_sm_put_blocking(pio_global, sm_global, is_fg ? p_fg_b : p_bg_b);
 #endif
                 }
             }
@@ -916,16 +937,23 @@ void drawChar(int16_t x, int16_t y, unsigned char c,
             for (sx = 0; sx < size_x; sx++)
             {
 #if defined(BOARD_TYPE_ADAFRUIT)
-                LCD_writeData(bg_hi);
-                LCD_writeData(bg_lo);
+                pio_sm_put_blocking(pio_global, sm_global, p_bg_hi);
+                pio_sm_put_blocking(pio_global, sm_global, p_bg_lo);
 #elif defined(BOARD_TYPE_NEWHAVEN)
-                LCD_writeData(bg_r);
-                LCD_writeData(bg_g);
-                LCD_writeData(bg_b);
+                pio_sm_put_blocking(pio_global, sm_global, p_bg_r);
+                pio_sm_put_blocking(pio_global, sm_global, p_bg_g);
+                pio_sm_put_blocking(pio_global, sm_global, p_bg_b);
 #endif
             }
         }
     }
+
+    // 6. Finish transaction and release CS
+    while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global)) ;
+    while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset())) ;
+    sleep_us(10);
+
+    LCD_deselectLCD();
 }
 
 void LCD_Clear(uint32_t color)
@@ -946,8 +974,7 @@ void LCD_Clear(uint32_t color)
 
     uint32_t pio_words[2] = {
         (uint32_t)hi << 24,
-        (uint32_t)lo << 24
-    };
+        (uint32_t)lo << 24};
     const uint8_t bytes_per_pixel = 2;
 
 #elif defined(BOARD_TYPE_NEWHAVEN)
@@ -958,8 +985,7 @@ void LCD_Clear(uint32_t color)
     uint32_t pio_words[3] = {
         (uint32_t)r << 24,
         (uint32_t)g << 24,
-        (uint32_t)b << 24
-    };
+        (uint32_t)b << 24};
     const uint8_t bytes_per_pixel = 3;
 
 #endif
@@ -973,16 +999,25 @@ void LCD_Clear(uint32_t color)
         }
     }
 
-    // 5. Unified Completion Check
+    // 5. Unified Completion Check (Drains FIFO + OSR completely)
+
+    // Step A: Wait until the TX FIFO queue is completely empty
+    // Wait for FIFO to drain
     while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global))
         ;
 
-    while (pio_global->sm[sm_global].addr != (offset + screen_spi_offset_entry_point))
+    // Wait for state machine to wrap back to the active entry instruction
+    while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset()))
         ;
 
-    sleep_us(2); // Safety pad for final execution cycles
+    sleep_us(10); // Allow final byte to shift out over SCLK pin
+    LCD_deselectLCD();
 
-    LCD_deselectLCD(); // Release Chip Select
+    // Step E: Pulse CS briefly to reset the controller's internal byte-framing logic
+    sleep_us(1);
+    LCD_selectLCD();
+    sleep_us(1);
+    LCD_deselectLCD();
 }
 
 void print(int16_t x, int16_t y, const char *str, uint32_t color, uint32_t bg, uint8_t size_x, uint8_t size_y, uint16_t screen_width)

@@ -1,11 +1,15 @@
 .program screen_spi
-.side_set 1
+.side_set 1 opt
 
-; SPI Mode 0 (CPOL=0, CPHA=0)
-; 2 cycles per bit total
-public entry_point:
-    out pins, 1  side 0 [1] ; Data transitions here, SCK is Low (1 cycle + 1 delay)
-    nop          side 1 [1] ; SCK goes High, Display samples here (1 cycle + 1 delay)
+; --- ADAFRUIT ENTRY POINT (4 cycles per bit total) ---
+public entry_point_adafruit:
+    out pins, 1  side 0 [1] ; SCLK Low (2 cycles total)
+    nop          side 1 [1] ; SCLK High (2 cycles total)
+
+; --- NEWHAVEN ENTRY POINT (10 cycles per bit total) ---
+public entry_point_newhaven:
+    out pins, 1  side 0 [1] ; SCLK Low (5 cycles total)
+    nop          side 1 [1] ; SCLK High (5 cycles total)
 
 % c-sdk {
 #include "hardware/gpio.h"
@@ -23,17 +27,38 @@ static inline void screen_spi_program_init(PIO pio, uint sm, uint offset, uint p
     pio_sm_set_consecutive_pindirs(pio, sm, pin_mosi, 1, true);
     pio_sm_set_consecutive_pindirs(pio, sm, pin_sck, 1, true);
 
-    // MSB first, Autopull enabled, 8-bit threshold
+    // Both displays use MSB first, Autopull enabled, 8-bit threshold
     sm_config_set_out_shift(&c, false, true, 8);
 
-    // We use 2.0f because our assembly has two instructions with [1] delays
-    // (out...[1] = 2 cycles, nop...[1] = 2 cycles... Wait!) 
-    // Correction: 'out pins, 1 side 0 [1]' is 2 cycles. 'nop side 1 [1]' is 2 cycles.
-    // That is 4 cycles total per bit.
+#if defined(BOARD_TYPE_ADAFRUIT)
+
+    // Adafruit uses the 4-cycle bit stream & calculated clock divider
     float div = (float)clock_get_hz(clk_sys) / (baud * 4.0f);
     sm_config_set_clkdiv(&c, div);
 
+    // Set initial execution PC to Adafruit entry instruction
+    sm_config_set_wrap(&c, offset + screen_spi_offset_entry_point_adafruit, offset + screen_spi_offset_entry_point_adafruit + 1);
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+
+    // NewHaven locks divider to 1.0f (10 system clock cycles per bit)
+    sm_config_set_clkdiv(&c, 1.0f);
+
+    // Set initial execution PC to NewHaven entry instruction
+    sm_config_set_wrap(&c, offset + screen_spi_offset_entry_point_newhaven, offset + screen_spi_offset_entry_point_newhaven + 1);
+
+#endif
+
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
+}
+
+// C Helper to return the correct execution entry offset for loop checks
+static inline uint screen_spi_get_entry_offset(void) {
+#if defined(BOARD_TYPE_ADAFRUIT)
+    return screen_spi_offset_entry_point_adafruit;
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    return screen_spi_offset_entry_point_newhaven;
+#endif
 }
 %}
