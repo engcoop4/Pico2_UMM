@@ -453,20 +453,37 @@ static inline void format_color(uint32_t color)
 #endif
 }
 
-void LCD_DrawPixel(unsigned int x, unsigned int y, uint32_t color)
-{
-    // Bounds safety check (both panels are 240 x 320)
-    if (x >= 240 || y >= 320)
-        return;
+void LCD_DrawPixel(int16_t x, int16_t y, uint32_t color) {
+    if (x < 0 || x >= 240 || y < 0 || y >= 320) return;
 
-    // 1. Set the 1x1 address window
+    // Set 1x1 window
     setCursor(x, y, x, y);
 
-    // 2. Begin RAM Write command (0x2C is standard for both controllers)
-    LCD_writeCommand(0x2C);
+    LCD_PIN_HI_DATA;
+    LCD_selectLCD();
 
-    // 3. Stream converted color bytes (Handles 16-bit vs 24-bit under the hood)
-    format_color(color);
+#if defined(BOARD_TYPE_ADAFRUIT)
+    uint8_t hi, lo;
+    rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)hi << 24);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)lo << 24);
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)r << 24);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)g << 24);
+    pio_sm_put_blocking(pio_global, sm_global, (uint32_t)b << 24);
+#endif
+
+    // Flush check: MUST wait for the 3rd byte to physically finish shifting over SCLK
+    while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global)) ;
+    while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset())) ;
+    sleep_us(2);
+
+    LCD_deselectLCD();
 }
 
 void H_line(unsigned int x, unsigned int y, unsigned int l, uint32_t color)
@@ -673,29 +690,28 @@ while (x < y) {
 */
 
 // circle fill
-void Circlef(unsigned int x, unsigned int y, unsigned int r, uint32_t color)
-{
-    int x1 = 0;
-    int y1 = r;
-    int d = 3 - 2 * r;
+void Circlef(int16_t x, int16_t y, int16_t r, uint32_t color) {
+    int16_t x1 = 0;
+    int16_t y1 = r;
+    int16_t d = 3 - 2 * r;
 
-    while (y1 >= x1)
-    {
-        H_line(x - x1, y + y1, 2 * x1, color);
-        H_line(x - x1, y - y1, 2 * x1, color);
-        H_line(x - y1, y + x1, 2 * y1, color);
-        H_line(x - y1, y - x1, 2 * y1, color);
+    // Draw the central horizontal line once across the diameter
+    H_line(x - r, y, 2 * r + 1, color);
 
-        if (d < 0)
-        {
-            d = d + 4 * x1 + 6;
-        }
-        else
-        {
-            d = d + 4 * (x1 - y1) + 10;
-            y1--;
-        }
+    while (y1 > x1) {
         x1++;
+        if (d < 0) {
+            d += 4 * x1 + 6;
+        } else {
+            y1--;
+            d += 4 * (x1 - y1) + 10;
+        }
+
+        // Draw 4 symmetric spans without duplicating horizontal lines
+        H_line(x - x1, y + y1, 2 * x1 + 1, color);
+        H_line(x - x1, y - y1, 2 * x1 + 1, color);
+        H_line(x - y1, y + x1, 2 * y1 + 1, color);
+        H_line(x - y1, y - x1, 2 * y1 + 1, color);
     }
 }
 
@@ -708,47 +724,110 @@ void swap(int16_t *a, int16_t *b)
     *b = temp;
 }
 
-void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color)
-{
-    int steep = abs(y1 - y0) > abs(x1 - x0);
-    if (steep)
-    {
-        swap(&x0, &y0);
-        swap(&x1, &y1);
-    }
+void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color) {
+    // -------------------------------------------------------------
+    // FAST PATH 1: Horizontal Line
+    // -------------------------------------------------------------
+    if (y0 == y1) {
+        int16_t x_start = x0 < x1 ? x0 : x1;
+        int16_t x_end   = x0 < x1 ? x1 : x0;
+        setCursor(x_start, y0, x_end, y0);
+        
+        LCD_PIN_HI_DATA;
+        LCD_selectLCD();
 
-    if (x0 > x1)
-    {
-        swap(&x0, &x1);
-        swap(&y0, &y1);
-    }
-    int dx, dy, err, ystep;
-    dx = x1 - x0;
-    dy = abs(y1 - y0);
-    err = dx / 2;
-
-    if (y0 < y1)
-    {
-        ystep = 1;
-    }
-    else
-    {
-        ystep = -1;
-    }
-    for (; x0 <= x1; x0++)
-    {
-        if (steep)
-        {
-            LCD_DrawPixel(y0, x0, color);
+#if defined(BOARD_TYPE_ADAFRUIT)
+        uint8_t hi, lo;
+        rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
+        uint32_t phi = (uint32_t)hi << 24, plo = (uint32_t)lo << 24;
+        for (int16_t x = x_start; x <= x_end; x++) {
+            pio_sm_put_blocking(pio_global, sm_global, phi);
+            pio_sm_put_blocking(pio_global, sm_global, plo);
         }
-        else
-        {
-            LCD_DrawPixel(x0, y0, color);
+#elif defined(BOARD_TYPE_NEWHAVEN)
+        uint8_t r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
+        uint32_t pr = (uint32_t)r << 24, pg = (uint32_t)g << 24, pb = (uint32_t)b << 24;
+        for (int16_t x = x_start; x <= x_end; x++) {
+            pio_sm_put_blocking(pio_global, sm_global, pr);
+            pio_sm_put_blocking(pio_global, sm_global, pg);
+            pio_sm_put_blocking(pio_global, sm_global, pb);
+        }
+#endif
+        while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global)) ;
+        while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset())) ;
+        sleep_us(2);
+        LCD_deselectLCD();
+        return;
+    }
+
+    // -------------------------------------------------------------
+    // FAST PATH 2: Vertical Line
+    // -------------------------------------------------------------
+    if (x0 == x1) {
+        int16_t y_start = y0 < y1 ? y0 : y1;
+        int16_t y_end   = y0 < y1 ? y1 : y0;
+        setCursor(x0, y_start, x0, y_end);
+
+        LCD_PIN_HI_DATA;
+        LCD_selectLCD();
+
+#if defined(BOARD_TYPE_ADAFRUIT)
+        uint8_t hi, lo;
+        rgb888_to_rgb565((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, &hi, &lo);
+        uint32_t phi = (uint32_t)hi << 24, plo = (uint32_t)lo << 24;
+        for (int16_t y = y_start; y <= y_end; y++) {
+            pio_sm_put_blocking(pio_global, sm_global, phi);
+            pio_sm_put_blocking(pio_global, sm_global, plo);
+        }
+#elif defined(BOARD_TYPE_NEWHAVEN)
+        uint8_t r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
+        uint32_t pr = (uint32_t)r << 24, pg = (uint32_t)g << 24, pb = (uint32_t)b << 24;
+        for (int16_t y = y_start; y <= y_end; y++) {
+            pio_sm_put_blocking(pio_global, sm_global, pr);
+            pio_sm_put_blocking(pio_global, sm_global, pg);
+            pio_sm_put_blocking(pio_global, sm_global, pb);
+        }
+#endif
+        while (!pio_sm_is_tx_fifo_empty(pio_global, sm_global)) ;
+        while (pio_global->sm[sm_global].addr != (offset + screen_spi_get_entry_offset())) ;
+        sleep_us(2);
+        LCD_deselectLCD();
+        return;
+    }
+
+    // -------------------------------------------------------------
+    // GENERAL PATH: Diagonal / Angled Lines (Bresenham)
+    // -------------------------------------------------------------
+    int16_t steep = abs(y1 - y0) > abs(x1 - x0);
+    if (steep) {
+        // Swap X and Y
+        int16_t t;
+        t = x0; x0 = y0; y0 = t;
+        t = x1; x1 = y1; y1 = t;
+    }
+
+    if (x0 > x1) {
+        // Swap endpoints so we draw left-to-right
+        int16_t t;
+        t = x0; x0 = x1; x1 = t;
+        t = y0; y0 = y1; y1 = t;
+    }
+
+    int16_t dx = x1 - x0;
+    int16_t dy = abs(y1 - y0);
+    int16_t err = dx / 2;
+    int16_t ystep = (y0 < y1) ? 1 : -1;
+    int16_t y = y0;
+
+    for (int16_t x = x0; x <= x1; x++) {
+        if (steep) {
+            LCD_DrawPixel(y, x, color); // Pixel on steep diagonal
+        } else {
+            LCD_DrawPixel(x, y, color); // Pixel on gentle diagonal
         }
         err -= dy;
-        if (err < 0)
-        {
-            y0 += ystep;
+        if (err < 0) {
+            y += ystep;
             err += dx;
         }
     }
@@ -762,97 +841,50 @@ void Triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_
     drawLine(x2, y2, x0, y0, color);
 }
 
-void Trianglef(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint32_t color)
-{
-    /* ARDUINO USED FOR REFERENCE */
+void Trianglef(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint32_t color) {
+    // 1. Sort coordinates by Y (y0 <= y1 <= y2)
+    if (y0 > y1) { swap(&y0, &y1); swap(&x0, &x1); }
+    if (y1 > y2) { swap(&y2, &y1); swap(&x2, &x1); }
+    if (y0 > y1) { swap(&y0, &y1); swap(&x0, &x1); }
 
-    int16_t a, b, y, last;
-
-    // Sort coordinates by Y order (y2 >= y1 >= y0)
-    if (y0 > y1)
-    {
-        swap(&y0, &y1);
-        swap(&x0, &x1);
-    }
-    if (y1 > y2)
-    {
-        swap(&y2, &y1);
-        swap(&x2, &x1);
-    }
-    if (y0 > y1)
-    {
-        swap(&y0, &y1);
-        swap(&x0, &x1);
-    }
-
-    if (y0 == y2)
-    { // Handle awkward all-on-same-line case as its own thing
-        a = b = x0;
-        if (x1 < a)
-            a = x1;
-        else if (x1 > b)
-            b = x1;
-        if (x2 < a)
-            a = x2;
-        else if (x2 > b)
-            b = x2;
+    // Flat line edge case
+    if (y0 == y2) {
+        int16_t a = x0, b = x0;
+        if (x1 < a) a = x1; else if (x1 > b) b = x1;
+        if (x2 < a) a = x2; else if (x2 > b) b = x2;
         H_line(a, y0, b - a + 1, color);
         return;
     }
 
-    int16_t
-        dx01 = x1 - x0,
-        dy01 = y1 - y0,
-        dx02 = x2 - x0,
-        dy02 = y2 - y0,
-        dx12 = x2 - x1,
-        dy12 = y2 - y1;
-    int32_t
-        sa = 0,
-        sb = 0;
+    int16_t dx01 = x1 - x0, dy01 = y1 - y0;
+    int16_t dx02 = x2 - x0, dy02 = y2 - y0;
+    int16_t dx12 = x2 - x1, dy12 = y2 - y1;
 
-    // For upper part of triangle, find scanline crossings for segments
-    // 0-1 and 0-2.  If y1=y2 (flat-bottomed triangle), the scanline y1
-    // is included here (and second loop will be skipped, avoiding a /0
-    // error there), otherwise scanline y1 is skipped here and handled
-    // in the second loop...which also avoids a /0 error here if y0=y1
-    // (flat-topped triangle).
-    if (y1 == y2)
-        last = y1; // Include y1 scanline
-    else
-        last = y1 - 1; // Skip it
+    int32_t sa = 0, sb = 0;
 
-    for (y = y0; y <= last; y++)
-    {
-        a = x0 + sa / dy01;
-        b = x0 + sb / dy02;
+    int16_t last = (y1 == y2) ? y1 : y1 - 1;
+
+    // Upper triangle section (y0 -> y1)
+    for (int16_t y = y0; y <= last; y++) {
+        int16_t a = x0 + sa / dy01;
+        int16_t b = x0 + sb / dy02;
         sa += dx01;
         sb += dx02;
-        // longhand:
-        // a = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
-        // b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
 
-        if (a > b)
-            swap(&a, &b);
+        if (a > b) swap(&a, &b);
         H_line(a, y, b - a + 1, color);
     }
 
-    // For lower part of triangle, find scanline crossings for segments
-    // 0-2 and 1-2.  This loop is skipped if y1=y2.
-    sa = dx12 * (y - y1);
-    sb = dx02 * (y - y0);
-    for (; y <= y2; y++)
-    {
-        a = x1 + sa / dy12;
-        b = x0 + sb / dy02;
+    // Lower triangle section (y1 -> y2)
+    sa = dx12 * (last + 1 - y1);
+    sb = dx02 * (last + 1 - y0);
+    for (int16_t y = last + 1; y <= y2; y++) {
+        int16_t a = x1 + sa / dy12;
+        int16_t b = x0 + sb / dy02;
         sa += dx12;
         sb += dx02;
-        // longhand:
-        // a = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
-        // b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
 
-        if (a > b)
-            swap(&a, &b);
+        if (a > b) swap(&a, &b);
         H_line(a, y, b - a + 1, color);
     }
 }
