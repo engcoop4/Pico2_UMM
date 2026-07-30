@@ -7,6 +7,7 @@
  * @copyright Copyright (c) 2026
  */
 
+#include "pico/time.h"
 #include "TouchScreeninit.h"
 #include "Hardware.h"
 #include "AdafruitDisplayInits.h"
@@ -29,10 +30,18 @@ uint16_t touch_baseline = 0;
 // USED FOR INITIAL CALIBRATION TO ENSURE USER IS PRESSING IN RELATIVE AREA.
 // changed from defines to variables so they can be changed dependent on calibration settings
 // most likely needs to be changed since ADC is switching from 10-bit (CCS) to 12-bit (Pico)
+#if defined(BOARD_TYPE_ADAFRUIT)
 uint16_t TS_X_MIN = 600;
 uint16_t TS_X_MAX = 3400;
 uint16_t TS_Y_MIN = 600;
 uint16_t TS_Y_MAX = 3400;
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+uint16_t TS_X_MIN = 600;
+uint16_t TS_X_MAX = 3400;
+uint16_t TS_Y_MIN = 600;
+uint16_t TS_Y_MAX = 3400;
+#endif
 
 void TouchScreeninit(void)
 {
@@ -41,32 +50,37 @@ void TouchScreeninit(void)
     adc_init();
 
     // 1. Set up touch GPIO directions & pull-ups (leaves X+/X- as outputs LOW for GND path)
-    TouchInterrupt_Helper();
+    SetTouchState();
 
     busy_wait_ms(10);
 
     adc_run(true); // Enable ADC
     CalibrateTouch();
 
-    // REMOVED: Do NOT change X_PLUS/X_MINUS back to GPIO_IN here!
-    // They must stay as outputs driven LOW so Y_MINUS can pull to GND on touch.
-
-    // 2. Enable hardware interrupt on Y- pin using our unified dispatcher
-    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+    // 2. Start repeating hardware timer for touch polling (runs every 20ms)
+    if (!timer_running)
+    {
+        add_repeating_timer_ms(-20, TouchTimer_Callback, NULL, &touch_timer);
+        timer_running = true;
+    }
 }
 
 void TouchScreen_deinit(void)
 {
-    // clear software flags
+    // Clear software flags
     touch_init = 0;
     screenTouched = 0;
 
-    // flush coordinates
+    // Flush coordinates
     X_Cord = 0;
     Y_Cord = 0;
 
-    // disable interrupts for touch detection on Y- pin (GPIO 22)
-    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, false);
+    // Stop background hardware timer
+    if (timer_running)
+    {
+        cancel_repeating_timer(&touch_timer);
+        timer_running = false;
+    }
 
     // Set all touch pins to high-impedance inputs
     gpio_set_dir(X_PLUS, GPIO_IN);
@@ -80,8 +94,37 @@ void TouchScreen_deinit(void)
     gpio_disable_pulls(X_MINUS);
     gpio_disable_pulls(Y_PLUS);
     gpio_disable_pulls(Y_MINUS);
+}
 
-    // CLEANED: Analog button ladder ADC selection and GPIO initialization removed here!
+bool TouchTimer_Callback(repeating_timer_t *rt)
+{
+    // Skip if screen is updating or an unhandled touch is still pending
+    if (screen_updating || touch_triggered)
+    {
+        return true; // keep timer active
+    }
+
+    // 1. Set trap state pins (X+/X- LOW, Y- input)
+    gpio_set_dir(X_PLUS, GPIO_OUT);   gpio_put(X_PLUS, 0);
+    gpio_set_dir(X_MINUS, GPIO_OUT);  gpio_put(X_MINUS, 0);
+    gpio_set_dir(Y_MINUS, GPIO_IN);
+
+    // 2. Sample Y+ on ADC Channel 0
+    adc_gpio_init(Y_PLUS);
+    adc_select_input(0);
+    busy_wait_us(50); // settling time
+
+    uint16_t val = adc_read();
+
+    // 3. Trigger touch if voltage drops below ~2.5V
+    if (val < TOUCH_ADC_THRESHOLD)
+    {
+        touch_triggered = 1;
+        X_Cord = -1;
+        Y_Cord = -1;
+    }
+
+    return true; // keep timer repeating
 }
 
 // slightly changes from msp430 architecture. rather than #pragma dictating the interrupt, the built in
@@ -99,8 +142,8 @@ void TouchInterrupt(uint gpio, uint32_t events)
     }
 
     // Process touch detection (the dispatcher already verified this is Y_MINUS!)
-    TouchInterrupt_Helper();
-    
+    SetTouchState();
+
     // Set your software flag for WaitForInput() to find
     touch_triggered = 1;
 
@@ -108,31 +151,34 @@ void TouchInterrupt(uint gpio, uint32_t events)
     X_Cord = -1;
     Y_Cord = -1;
 
-    // Temporarily turn off the touch pin interrupt so it doesn't bounce 
+    // Temporarily turn off the touch pin interrupt so it doesn't bounce
     // while we process this press in the main loop
     gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, false);
 }
 
 // used to re-initialize GPIOs to handle interrupt
-void TouchInterrupt_Helper(void)
+void SetTouchState(void)
 {
     gpio_init(X_PLUS);
     gpio_init(X_MINUS);
-    adc_gpio_init(Y_PLUS); // Y+ ready as ADC input
+    adc_gpio_init(Y_PLUS);
     gpio_init(Y_MINUS);
 
-    // Set X+ and X- as outputs driven LOW to create the GND plane for touch detection
+    // X+ and X- output LOW (GND plane)
     gpio_set_dir(X_PLUS, GPIO_OUT);
     gpio_put(X_PLUS, 0);
 
     gpio_set_dir(X_MINUS, GPIO_OUT);
     gpio_put(X_MINUS, 0);
 
-    // Set Y- as input with pull-up to 3.3V
+    // Set Y- as input
     gpio_set_dir(Y_MINUS, GPIO_IN);
-    gpio_pull_up(Y_MINUS);
 
-    // Disable pulls on other pins
+    // *** CHANGE THIS LINE ***
+    // Replace gpio_pull_up(Y_MINUS); with:
+    gpio_disable_pulls(Y_MINUS);
+
+    // Disable pulls on all other pins
     gpio_disable_pulls(X_PLUS);
     gpio_disable_pulls(X_MINUS);
     gpio_disable_pulls(Y_PLUS);
@@ -205,7 +251,7 @@ bool CaliBoundsCheckTouch(void)
     uint16_t ry = ReadTouchY_Raw();
 
     // re-initialize the interrupt state after every reading
-    TouchInterrupt_Helper();
+    SetTouchState();
 
     if (!cali)
     {
@@ -276,55 +322,50 @@ void WaitForTouchRelease(void)
     uint32_t avg_val = 0;
     uint8_t count = 0;
 
-    // 1. Pin Setup (Trap State)
-    gpio_set_dir(X_PLUS, GPIO_OUT);
-    gpio_set_dir(X_MINUS, GPIO_OUT);
-    gpio_put(X_PLUS, 0);
-    gpio_put(X_MINUS, 0);
+    // 1. Establish Trap State for release checking
+    gpio_set_dir(X_PLUS, GPIO_OUT);  gpio_put(X_PLUS, 0);
+    gpio_set_dir(X_MINUS, GPIO_OUT); gpio_put(X_MINUS, 0);
+    gpio_set_dir(Y_MINUS, GPIO_IN);
 
-    // Prepare Y+ for ADC reading
     adc_gpio_init(Y_PLUS);
     adc_select_input(0); // ADC0 (GPIO 26)
 
-    // Scaling the MARGIN: Since 12-bit is 4x more sensitive,
-    // ensure your MARGIN is scaled up (e.g., if it was 50, use 200).
-
+    // 2. Loop until voltage stays above threshold (released) for CHECK_RELEASE consecutive reads
     while (count < CHECK_RELEASE)
     {
         avg_val = 0;
 
-        // take 4 samples to average
         for (int i = 0; i < AVERAGE_SAMPLES_RELEASE; i++)
         {
             avg_val += adc_read();
-            busy_wait_us(10); // replaces __delay_cycles(100)
+            busy_wait_us(10);
         }
         avg_val = avg_val / AVERAGE_SAMPLES_RELEASE;
 
-        // check if the voltage returned to baseline (screen released)
-        if (avg_val > (touch_baseline - MARGIN))
+        // Screen is released when voltage returns above the threshold (+ hysteresis buffer)
+        if (avg_val > (TOUCH_ADC_THRESHOLD + 400))
         {
             count++;
         }
         else
         {
-            count = 0;
+            count = 0; // Finger still on screen, reset counter
         }
 
-        //watchdog_update();
-        busy_wait_us(100); // replaces __delay_cycles(1000)
+        busy_wait_us(100);
     }
 
-    gpio_init(Y_PLUS);
-    gpio_set_dir(Y_PLUS, GPIO_IN); // High-Z, waiting for pull-up
+    // 3. Return Y+ back to regular GPIO state
+    gpio_set_function(Y_PLUS, GPIO_FUNC_SIO);
+    gpio_set_dir(Y_PLUS, GPIO_IN);
 
     busy_wait_us(10);
 
-    // clear hardware pending interrupt bit
-    gpio_acknowledge_irq(Y_MINUS, GPIO_IRQ_EDGE_FALL);
+    // 4. Reset software flag so background timer can sample again
+    touch_triggered = 0;
 
-    // re-enable interrupt for next touch event
-    gpio_set_irq_enabled(Y_MINUS, GPIO_IRQ_EDGE_FALL, true);
+    // REMOVED: gpio_acknowledge_irq(Y_MINUS, ...)
+    // REMOVED: gpio_set_irq_enabled(Y_MINUS, ...)
 }
 
 bool IsFingerPhysicallyTouching(void)
@@ -367,7 +408,7 @@ uint16_t ReadTouchX(void)
 
     const uint16_t TARGET_WIDTH = DISP_WIDTH - (CALI_OFFSET_X * 2); // 210 pixel span
 
-    uint32_t adj_min_x = TS_X_MIN - X_COMPENSATION;
+    uint32_t adj_min_x = (TS_X_MIN > X_COMPENSATION) ? (TS_X_MIN - X_COMPENSATION) : 0;
 
     // clamping
     if (avg_raw < adj_min_x)
@@ -438,7 +479,7 @@ uint16_t ReadTouchY(void)
 
     const uint16_t TARGET_HEIGHT = DISP_HEIGHT - (CALI_OFFSET_Y * 2); // 290 pixel span
 
-    uint32_t adj_min_y = TS_Y_MIN - Y_COMPENSATION;
+    uint32_t adj_min_y = (TS_Y_MIN > Y_COMPENSATION) ? (TS_Y_MIN - Y_COMPENSATION) : 0;
 
     // clamping
     if (avg_raw < adj_min_y)

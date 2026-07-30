@@ -119,9 +119,4 @@ void master_gpio_irq_dispatcher(uint gpio, uint32_t events)
         // The SDK automatically handles clearing the Pico's internal GPIO flags,
         // but remember: reading REG_INPUT_P0 later clears the TCA9539 hardware /INT line!
     }
-    else if (gpio == Y_MINUS)
-    {
-        // 2. Handle Touch Screen Interrupt
-        TouchInterrupt(gpio, events);
-    }
 }

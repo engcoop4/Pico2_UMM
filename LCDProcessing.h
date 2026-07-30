@@ -285,7 +285,7 @@ extern volatile bool button_event_pending;
 #define DISPCHAN_EXIT_CIRCLE_R 11
 
 // InitYPositions
-#define Y_POS_POSSIBILITES 7
+#define Y_POS_POSSIBILITIES 7
 #define Y_POS_OFF 6
 
 // WaitForInput

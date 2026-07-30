@@ -211,7 +211,7 @@ void NewHaven_Init(void)
 
     // Memory Data Access Control (MADCTL)
     LCD_writeCommand(0x36);
-    LCD_writeData(0xC0);
+    LCD_writeData(0x00);
 
     // Interface Pixel Format (COLMOD) -> 18-bit serial SPI formatting
     LCD_writeCommand(0x3A);

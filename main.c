@@ -49,7 +49,7 @@ int main()
         // Handle I2C failure if necessary
     }
 
-    TouchScreeninit();
+    adc_init();             // required for the screen to populate. i have no idea what is requiring the adc_init to progress, but i dont believe this is actually needed. it is accidentally a pillar to run the program
 
     LCDinit();
     Screen_Setup();

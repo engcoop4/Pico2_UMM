@@ -252,7 +252,7 @@ void MENU_TouchCalibration(void)
     Circlef(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, RED);
     Circle(CALI_CIRCLE_ONE_X, CALI_CIRCLE_ONE_Y, CALI_CIRCLE_ONE_R, WHITE);
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 void UpdateTouchCalibration(void)
@@ -276,7 +276,7 @@ void FinishTouchCalibration(void)
     // delay for user to read screen
     sleep_ms(150);
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 // 4 pixels between boxes, 48 pixels per box for even spacing
@@ -310,7 +310,7 @@ void MENU_OperatingMode(void)
     // Draw the cursor highlight at its current position
     Rect(OPER_MODE_BOX_X - 1, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)) - 1, OPER_MODE_BOX_W + 1, OPER_MODE_BOX_H + 1, WHITE);
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 void UpdateOperatingModeSelection(void)
@@ -327,7 +327,7 @@ void UpdateOperatingModeSelection(void)
     Rect(OPER_MODE_BOX_X - 1, (OPER_MODE_BOX_Y_STARTING_OFF + (VARIABLE_FOR_BOX_Y_OFF * cursor_position)) - 1, OPER_MODE_BOX_W + 1, OPER_MODE_BOX_H + 1, WHITE);
     title_index = cursor_position;
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 // Shows number of displays and implements UP as a +1 and DOWN as a -1. Minimum is 1, maximum is 7
@@ -363,7 +363,7 @@ void MENU_NumberOfDisplays(void)
 
     UpdateNumberOfDisplays();
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 void UpdateNumberOfDisplays(void)
@@ -385,7 +385,7 @@ void UpdateNumberOfDisplays(void)
           FindCenterY(U_NUMD_CLEAR_Y, y, "1", FONT_3),
           display, RED, WHITE, FONT_3, FONT_3, SCREEN_EDGE_X);
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 // modify to have condensed screen if touch_init initialized (use touch_init * [factor]) to adjust bounds ?, 0 means no bounds adjustment, 1 means bounds adjustment)
@@ -438,7 +438,7 @@ void MENU_ChannelSelection(void)
 
     UpdateChannelSelection();
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 void UpdateChannelSelection(void)
@@ -524,7 +524,7 @@ void UpdateChannelSelection(void)
               chan_sel, WHITE, BLACK, FONT_1, FONT_1, SCREEN_EDGE_X);
     }
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 // Can alter preset configurations
@@ -601,13 +601,13 @@ void DisplayChannels(void)
 
     current_screen = Screen_Metering;
     screen_updating = false;
-    TouchInterrupt_Helper();
+    SetTouchState();
 }
 
 void InitYPositions(void)
 {
     int i;
-    for (i = 0; i < Y_POS_POSSIBILITES; i++)
+    for (i = 0; i < Y_POS_POSSIBILITIES; i++)
     {
         saved_Ypos[i] = ((additional_offset[numberdisplays - 1]) * (i + 1) +
                          (diff_display[0] + (diff_display[numberdisplays] + Y_POS_OFF) * (i)));

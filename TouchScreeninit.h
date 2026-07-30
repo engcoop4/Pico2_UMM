@@ -12,6 +12,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "pico/time.h"
+#include "Global.h"
 
 #define MARGIN 600 // 150 * 4
 // Converted constants to macros for better readability and maintainability
@@ -20,14 +22,24 @@
 #define Y_MINUS 22
 #define X_MINUS 2
 
-#define NUMBER_OF_TOUCH_CHANNELS 4
-
-#define CALIBRATE_SAMPLES 16
-
+#if defined(BOARD_TYPE_ADAFRUIT)
+#define TOUCH_ADC_THRESHOLD 1240            // approx. 1.00V for threshold on Adafruit (lower res. than NewHaven board)
 #define CALI_BOUNDS_MIN_X 1000 // Low threshold for calibration (near 0V)
 #define CALI_BOUNDS_MIN_Y 1000
 #define CALI_BOUNDS_MAX_X 3200 // High threshold for calibration (near max voltage)
 #define CALI_BOUNDS_MAX_Y 3200
+
+#elif defined(BOARD_TYPE_NEWHAVEN)
+#define TOUCH_ADC_THRESHOLD 3100
+#define CALI_BOUNDS_MIN_X 2600 // Low threshold for calibration (near 0V)
+#define CALI_BOUNDS_MIN_Y 2200
+#define CALI_BOUNDS_MAX_X 3400 // High threshold for calibration (near max voltage)
+#define CALI_BOUNDS_MAX_Y 3600
+#endif
+
+#define NUMBER_OF_TOUCH_CHANNELS 4
+
+#define CALIBRATE_SAMPLES 16
 
 #define CAPTURE_CALI_COORDS_SAMPLES 16
 
@@ -56,9 +68,11 @@ void TouchScreeninit(void);
 
 void TouchScreen_deinit(void);
 
+bool TouchTimer_Callback(repeating_timer_t *rt);
+
 void TouchInterrupt(unsigned int, uint32_t);
 
-void TouchInterrupt_Helper(void);
+void SetTouchState(void);
 
 void TouchToButtons(void);
 

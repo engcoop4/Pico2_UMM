@@ -72,6 +72,9 @@ target_link_libraries(main
         hardware_i2c
         )
 
+# Modify to main PRIAVE BOARD_TYPE_ADAFRUIT=1 when switching screens
+target_compile_definitions(main PRIVATE BOARD_TYPE_NEWHAVEN=1)
+
 # Add the standard include files to the build
 target_include_directories(main PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}

@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "hardware/timer.h"
+#include "pico/time.h"
 
 // changing to lower value changes display quicker but consumes CPU resources more
 // changing to higher value changes display slower but frees up CPU more
@@ -18,8 +19,6 @@
 #define LCD_UPDATE_INTERVAL 50
 
 // switch between BOARD_TYPE_ADAFRUIT and BOARD_TYPE_NEWHAVEN depending on which device is wired
-#define BOARD_TYPE_ADAFRUIT
-//#define BOARD_TYPE_NEWHAVEN
 
 #if defined(BOARD_TYPE_ADAFRUIT) && defined(BOARD_TYPE_NEWHAVEN)
     #error "Multiple display boards defined! Please define only one in Global.h."
@@ -75,5 +74,8 @@ typedef enum
     Wattmeter,        // 2
     FreqMeter         // 3
 } DisplaySelection;
+
+static struct repeating_timer touch_timer;
+static bool timer_running = false;
 
 #endif
