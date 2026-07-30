@@ -10,7 +10,7 @@
 #include "pico/time.h"
 #include "TouchScreeninit.h"
 #include "Hardware.h"
-#include "AdafruitDisplayInits.h"
+#include "ScreenDisplayInits.h"
 #include "hardware/watchdog.h"
 #include <stdbool.h>
 #include <stdint.h>

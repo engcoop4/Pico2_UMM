@@ -38,7 +38,7 @@ pico_sdk_init()
 add_executable(main 
     main.c 
     initSPI.c
-    AdafruitDisplayInits.c
+    ScreenDisplayInits.c
     LCDProcessing.c
     cmdProcessing.c
     TouchScreeninit.c

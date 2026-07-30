@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "hardware/dma.h"
-#include "AdafruitDisplayInits.h"
+#include "ScreenDisplayInits.h"
 #include "hardware/pio.h"
 #include "screen_spi.pio.h"
 

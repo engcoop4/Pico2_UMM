@@ -15,7 +15,7 @@
 #include "I2CExtension.h"
 
 // Function for Display, Commands, and Touch Screen
-#include "AdafruitDisplayInits.h"
+#include "ScreenDisplayInits.h"
 #include "LCDProcessing.h"
 #include "cmdProcessing.h"
 #include "TouchScreeninit.h"

@@ -10,7 +10,7 @@
 #include <ctype.h>
 
 #include "cmdProcessing.h"
-#include "AdafruitDisplayInits.h"
+#include "ScreenDisplayInits.h"
 #include "UART.h"
 #include "Global.h"
 

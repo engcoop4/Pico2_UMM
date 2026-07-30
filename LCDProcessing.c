@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "TouchScreeninit.h"
-#include "AdafruitDisplayInits.h"
+#include "ScreenDisplayInits.h"
 #include "Global.h"
 #include "I2CExtension.h"
 #include "hardware/watchdog.h"
