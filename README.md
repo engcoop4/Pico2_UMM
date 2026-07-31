@@ -15,7 +15,7 @@ Global.h acts as a header file to main.c almost, it holds many of the variable d
 
 UART.c, and UART.h are currently unused, but UART will be needed for RS-485 communication which is eventually planned. File names may be changed, but for now these operate as placeholders.
 
-initSPI.c, and initSPI.h are currently unused as they were previously used for screen display but were replaced with PI/O. These files can be renamed and used for the ADC SPI communication.
+SPI.c, and SPI.h are currently unused as they were previously used for screen display but were replaced with PI/O. These files can be renamed and used for the ADC SPI communication.
 
 screen_spi.pio contains the programming for SPI clock and MOSI emulation. In order to bypass SPI bottleneck with the ADC and limitations from the Ethernet compatibility, the Raspberry Pi's built in Programmable I/Os can be used to emulate the SCLK and MOSI signal that SPI would generate. These operate with
 their own assembly language exclusive to Raspberry Pi, but there are a lot of online resources for how to handle this.
