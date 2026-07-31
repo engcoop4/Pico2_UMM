@@ -331,6 +331,8 @@ extern volatile bool button_event_pending;
 #define NUMC_INC_THRESH_X_LEFT 195
 #define NUMC_INC_THRESH_X_W 60 // ideally 239 - 195 would be 44, but due to rounding 44 doesnt give enough leniency for touch detection, boosted to 60
 
+void LCDinit(void);
+
 extern int diff_display[8];
 extern int16_t saved_Ypos[7];
 extern uint8_t LCD_ch_source[7];

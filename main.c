@@ -7,7 +7,7 @@
 #include "hardware/watchdog.h"
 
 // Initialization/hardware
-#include "initSPI.h"
+#include "SPI.h"
 #include "UART.h"
 #include "Hardware.h"
 #include "Global.h"

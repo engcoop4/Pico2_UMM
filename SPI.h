@@ -4,6 +4,4 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 
-void LCDinit(void);
-
 #endif /* INITSPI_H_ */
