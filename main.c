@@ -7,7 +7,7 @@
 #include "hardware/watchdog.h"
 
 // Initialization/hardware
-#include "SPI.h"
+#include "ADCSPI.h"
 #include "UART.h"
 #include "Hardware.h"
 #include "Global.h"
@@ -46,10 +46,11 @@ int main()
     LEDs_Init();
     
     if (!I2C_Init()) {
-        // Handle I2C failure if necessary
+        // in case the I2C does not respond (catch case)
     }
 
-    adc_init();             // required for the screen to populate. i have no idea what is requiring the adc_init to progress, but i dont believe this is actually needed. it is accidentally a pillar to run the program
+    adc_init();             // required for the screen to populate. i have no idea what is requiring the adc_init to progress, but i dont believe this is actually needed. it is accidentally a pillar to run the program? not super important
+                            // that its needed as it only executes upon start-up, its just aggravating because idk why it is needed. something inside the while(true) loop depends on it, before UIDispatcher
 
     LCDinit();
     Screen_Setup();

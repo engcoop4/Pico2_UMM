@@ -42,13 +42,6 @@ void LEDs_Init(void)
     gpio_put(LED4, 1);
 }
 
-void Buttons_Init(void)
-{
-    adc_init();
-    adc_gpio_init(SWLADDER);
-    adc_select_input(2);
-}
-
 bool timer_callback_reset_check(struct repeating_timer *t)
 {
     uint8_t selected_input = adc_get_selected_input();

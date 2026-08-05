@@ -37,7 +37,7 @@ pico_sdk_init()
 
 add_executable(main 
     main.c 
-    SPI.c
+    ADCSPI.c
     ScreenDisplayInits.c
     LCDProcessing.c
     cmdProcessing.c
