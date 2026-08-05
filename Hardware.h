@@ -7,11 +7,6 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 
-// --- Buttons ---
-// make sure to use corresponding GP number, not just pin number (e.g., GPIO 2 is pin 4 on the board)
-// need ONE switch set to GPIO 28 (ADC2)
-#define SWLADDER 28 // SW1, GPIO 28, ADC2
-
 // --- LCD Pin Mapping ---
 #define PIN_CS 13
 #define PIN_DC 14  // Replaces P4_7 (UMM board), Logic: 0 for cmd, 1 for data

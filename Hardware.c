@@ -7,6 +7,7 @@
 #include "screen_spi.pio.h"
 #include "I2CExtension.h"
 #include "TouchScreeninit.h"
+#include "ADCSPI.h"
 
 #define RESET_THRESHOLD 300 // 3 seconds at 10ms intervals
 volatile uint32_t reset_hold_counter = 0;
@@ -15,6 +16,8 @@ volatile bool timer_return_flag = false;
 PIO pio_global = pio0;
 uint sm_global;
 uint offset;
+
+volatile bool adc_data_ready = false;
 
 void PIO_Init(void) {
     offset = pio_add_program(pio_global, &screen_spi_program);
@@ -107,9 +110,12 @@ void master_gpio_irq_dispatcher(uint gpio, uint32_t events)
 {
     if (gpio == PICO_I2C_INT) 
     {
-        // 1. Handle Button Expander Interrupt
+        // touch button expander interrupt
         button_event_pending = true;
-        // The SDK automatically handles clearing the Pico's internal GPIO flags,
-        // but remember: reading REG_INPUT_P0 later clears the TCA9539 hardware /INT line!
+    }
+    else if (gpio == ADS131_DRDY)
+    {
+        // handle DRDY interrupt
+        adc_data_ready = true;
     }
 }

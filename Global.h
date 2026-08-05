@@ -19,7 +19,6 @@
 #define LCD_UPDATE_INTERVAL 50
 
 // switch between BOARD_TYPE_ADAFRUIT and BOARD_TYPE_NEWHAVEN depending on which device is wired
-
 #if defined(BOARD_TYPE_ADAFRUIT) && defined(BOARD_TYPE_NEWHAVEN)
     #error "Multiple display boards defined! Please define only one in Global.h."
 #endif

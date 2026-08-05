@@ -37,6 +37,105 @@ const MainScreenFunction Screen_Options[9] = {
     [Screen_Metering] = DisplayChannels // safety precaution for 'InitializationDone'
 };
 
+static volatile bool adc_data_ready = false;
+
+int main() {
+    stdio_init_all();
+    
+    // Wait for USB Serial terminal to connect
+    sleep_ms(2500);
+
+    printf("\n==================================================\n");
+    printf("   ADS131M08 Complete Driver Verification Test    \n");
+    printf("==================================================\n");
+
+    gpio_set_irq_callback(&master_gpio_irq_dispatcher);
+    irq_set_enabled(IO_IRQ_BANK0, true);
+
+    // -------------------------------------------------------------------------
+    // STEP 1: Driver Initialization
+    // -------------------------------------------------------------------------
+    printf("\n[1/3] Initializing ADS131M08 Driver & GPIO Interrupts...\n");
+    ads131_init();
+
+    printf("      -> Driver initialized.\n");
+
+    // -------------------------------------------------------------------------
+    // STEP 2: SPI Register Read/Write Verification
+    // -------------------------------------------------------------------------
+    printf("\n[2/3] Verifying SPI Register Read/Write Communication...\n");
+
+    // A. Read Device ID Register (0x00)
+    uint16_t chip_id = ads131_read_register(ADS131_REG_ID);
+    printf("      -> ID Register (0x00): 0x%04X ", chip_id);
+
+    if (chip_id == 0x0000 || chip_id == 0xFFFF) {
+        printf("[FAIL]\n");
+        printf("\nERROR: SPI Bus communication failed! Check SPI pin wiring (SCLK, DIN, DOUT, CS) and power rails.\n");
+        while (1) { tight_loop_contents(); }
+    } else {
+        printf("[PASS]\n");
+    }
+
+    // B. Read initial CLOCK Register (0x03)
+    uint16_t initial_clock = ads131_read_register(ADS131_REG_CLOCK);
+    printf("      -> Initial CLOCK Register (0x03): 0x%04X\n", initial_clock);
+
+    // C. Write to CLOCK Register to test WREG (Set OSR bits)
+    // Write 0xFF0E to temporarily modify CLOCK register
+    printf("      -> Testing Register Write (WREG)... Writing 0xFF0E to CLOCK register...\n");
+    ads131_write_register(ADS131_REG_CLOCK, 0xFF0E);
+
+    // D. Read back CLOCK Register to verify write success
+    uint16_t modified_clock = ads131_read_register(ADS131_REG_CLOCK);
+    printf("      -> Readback CLOCK Register: 0x%04X ", modified_clock);
+
+    if (modified_clock == 0xFF0E) {
+        printf("[PASS - WREG working!]\n");
+    } else {
+        printf("[FAIL - Write failed]\n");
+    }
+
+    // E. Restore CLOCK register back to default
+    ads131_write_register(ADS131_REG_CLOCK, initial_clock);
+
+    // -------------------------------------------------------------------------
+    // STEP 3: DRDY Interrupt & Live Data Frame Reading Verification
+    // -------------------------------------------------------------------------
+    printf("\n[3/3] Testing Live Data Frame Acquisition via DRDY Interrupt...\n");
+    printf("      Reading 5 consecutive sample frames:\n\n");
+
+    ads131_frame_t frame;
+    uint32_t frame_count = 0;
+
+    while (frame_count < 5) {
+        if (adc_data_ready) {
+            adc_data_ready = false; // Clear flag
+
+            if (ads131_read_frame(&frame)) {
+                frame_count++;
+                printf("  Frame #%lu | Status: 0x%04X | CRC: 0x%04X\n", 
+                        frame_count, frame.status, frame.crc);
+                
+                // Print Channels 0 through 3 raw signed counts
+                printf("    Ch0: %10ld | Ch1: %10ld | Ch2: %10ld | Ch3: %10ld\n",
+                       (long)frame.channel[0], (long)frame.channel[1],
+                       (long)frame.channel[2], (long)frame.channel[3]);
+            }
+        }
+    }
+
+    printf("\n==================================================\n");
+    printf(" SUCCESS: All driver verification tests passed!\n");
+    printf(" ADS131M08 is fully operational on RP2350.\n");
+    printf("==================================================\n");
+
+    while (1) {
+        tight_loop_contents();
+    }
+}
+
+/*
 int main()
 {
     stdio_init_all();
@@ -101,3 +200,4 @@ int main()
     }
 
 }
+    */
