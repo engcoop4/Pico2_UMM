@@ -452,6 +452,8 @@ void MENU_ChannelSelection(void)
         Trianglef(CHANSEL_LEFT_TRI_X1, CHANSEL_LEFT_TRI_Y1, CHANSEL_LEFT_TRI_X2, CHANSEL_LEFT_TRI_Y2, CHANSEL_LEFT_TRI_X3, CHANSEL_LEFT_TRI_Y3, RED);
         Trianglef(CHANSEL_RIGHT_TRI_X1, CHANSEL_RIGHT_TRI_Y1, CHANSEL_RIGHT_TRI_X2, CHANSEL_RIGHT_TRI_Y2, CHANSEL_RIGHT_TRI_X3, CHANSEL_RIGHT_TRI_Y3, RED);
 
+        // used to display the proposed bounds for the arrow keys
+        /*
         H_line(0, 60, 35, CYAN);
         V_line(35, 60, 58, CYAN);
         H_line(0, 118, 35, CYAN);
@@ -459,6 +461,7 @@ void MENU_ChannelSelection(void)
         H_line(204, 60, 35, CYAN);
         V_line(204, 60, 58, CYAN);
         H_line(204, 118, 35, CYAN);
+        */
     }
 
     UpdateChannelSelection();

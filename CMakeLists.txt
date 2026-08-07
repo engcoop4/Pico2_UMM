@@ -70,6 +70,8 @@ target_link_libraries(main
         hardware_pio
         hardware_sync
         hardware_i2c
+        hardware_pwm
+        hardware_clocks
         )
 
 # Modify to main PRIAVE BOARD_TYPE_ADAFRUIT=1 when switching screens

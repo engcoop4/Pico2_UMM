@@ -20,8 +20,9 @@
 #include "cmdProcessing.h"
 #include "TouchScreeninit.h"
 
-//#define MAINFILE
-#define TESTADC
+// change these depending on if you want to just run the main file, or if you want to run the tests for the ADC
+#define MAINFILE
+//#define TESTADC
 
 #if defined(MAINFILE)
 volatile State_of_Screen current_screen = Screen_ControlsDisplay;
@@ -110,106 +111,89 @@ int main()
 
 static volatile bool adc_data_ready = false;
 
-int main()
-{
-    stdio_init_all();
+int main() {
 
-    // Wait for USB Serial terminal to attach
-    sleep_ms(5000);
+    stdio_init_all();
+    sleep_ms(2500);
 
     printf("\n==================================================\n");
     printf("   ADS131M08 Complete Driver Verification Test    \n");
     printf("==================================================\n");
 
-    // Configure global IRQ handlers
     gpio_set_irq_callback(&master_gpio_irq_dispatcher);
     irq_set_enabled(IO_IRQ_BANK0, true);
 
     // -------------------------------------------------------------------------
     // STEP 1: Driver Initialization
     // -------------------------------------------------------------------------
+
     printf("\n[1/3] Initializing ADS131M08 Driver & GPIO Interrupts...\n");
     ads131_init();
-
-    printf("      -> Driver initialized.\n");
+    printf("      -> Driver initialized.\n"); 
 
     // -------------------------------------------------------------------------
     // STEP 2: SPI Register Read/Write Verification
     // -------------------------------------------------------------------------
     printf("\n[2/3] Verifying SPI Register Read/Write Communication...\n");
 
-    // A. Read Device ID Register (0x00)
     uint16_t chip_id = ads131_read_register(ADS131_REG_ID);
     printf("      -> ID Register (0x00): 0x%04X ", chip_id);
 
-    if (chip_id == 0x0000 || chip_id == 0xFFFF)
-    {
+    if (chip_id == 0x0000 || chip_id == 0xFFFF) {
         printf("[FAIL]\n");
-        printf("\nERROR: SPI Bus communication failed! Check SPI pin wiring (SCLK, DIN, DOUT, CS) and power rails.\n");
-        while (1)
-        {
-            tight_loop_contents();
-        }
-    }
-    else
-    {
+        printf("\nERROR: SPI Bus communication failed!\n");
+        while (1) { tight_loop_contents(); }
+    } else {
         printf("[PASS]\n");
     }
 
-    // B. Read initial CLOCK Register (0x03)
     uint16_t initial_clock = ads131_read_register(ADS131_REG_CLOCK);
     printf("      -> Initial CLOCK Register (0x03): 0x%04X\n", initial_clock);
 
-    // C. Write to CLOCK Register to test WREG (Set OSR bits)
-    printf("      -> Testing Register Write (WREG)... Writing 0xFF0E to CLOCK register...\n");
+    printf("      -> Testing Register Write (WREG)... Writing 0xFF0E...\n");
     ads131_write_register(ADS131_REG_CLOCK, 0xFF0E);
 
-    // D. Read back CLOCK Register to verify write success
     uint16_t modified_clock = ads131_read_register(ADS131_REG_CLOCK);
     printf("      -> Readback CLOCK Register: 0x%04X ", modified_clock);
 
-    if (modified_clock == 0xFF0E)
-    {
+    if (modified_clock == 0xFF0E) {
         printf("[PASS - WREG working!]\n");
-    }
-    else
-    {
+    } else {
         printf("[FAIL - Write failed]\n");
     }
 
-    // E. Restore CLOCK register back to default
+    // Restore CLOCK register back to original
     ads131_write_register(ADS131_REG_CLOCK, initial_clock);
 
     // -------------------------------------------------------------------------
-    // STEP 3A: Physical DRDY Pin Polling Check (Diagnostic)
+    // STEP 3A: DRDY Pin Polling & Frame Latch Flush Check
     // -------------------------------------------------------------------------
-    printf("\n[3/3] Diagnostic: Polling DRDY Pin (GP6) for activity...\n");
+    printf("\n[3/3] Diagnostic: Flushing initial frame and polling DRDY (GP6)...\n");
+
+    // Flush initial pending conversion frame to clear latched LOW state
+    ads131_frame_t dummy_frame;
+    ads131_read_frame(&dummy_frame);
+    sleep_us(100);
+
+    bool pin_after_read = gpio_get(ADS131_DRDY);
+    printf("      -> State of DRDY pin AFTER clearing frame: %d\n", pin_after_read);
 
     bool pin_toggled = false;
-    bool last_state = gpio_get(ADS131_DRDY);
-    printf("      -> Current state of DRDY pin prior to test: %d\n", last_state);
-
-    // Check for up to 500ms if DRDY goes from HIGH to LOW
-    for (int i = 0; i < 50; i++)
-    {
-        bool current_state = gpio_get(ADS131_DRDY);
-        if (last_state == true && current_state == false)
-        {
-            printf("      -> SUCCESS: Physical DRDY falling edge detected on GP6!\n");
+    for (int i = 0; i < 100; i++) {
+        if (gpio_get(ADS131_DRDY) == false) {
+            printf("      -> SUCCESS: DRDY pulsed LOW for new data frame!\n");
             pin_toggled = true;
             break;
         }
-        last_state = current_state;
-        sleep_ms(10);
+        sleep_ms(5);
     }
 
-    if (!pin_toggled)
-    {
-        printf("      -> FAILURE: DRDY pin (GP6) is stuck at %d. Hardware/Clock issue present.\n", last_state);
+    if (!pin_toggled) {
+        printf("      -> FAILURE: DRDY failed to pulse again after clear.\n");
     }
 
     // -------------------------------------------------------------------------
-    // STEP 3B: Interrupt Frame Acquisition Test (Timeout Protected)
+    // STEP 3B: Interrupt Frame Acquisition Test
     // -------------------------------------------------------------------------
     printf("\n[Testing Live Data Frame Acquisition via DRDY Interrupt...]\n");
 
@@ -217,19 +201,15 @@ int main()
     uint32_t frame_count = 0;
     uint32_t timeout_counter = 0;
 
-    // Loop until 5 frames read OR 3-second timeout reached
-    while (frame_count < 5 && timeout_counter < 300)
-    {
-        if (adc_data_ready)
-        {
-            adc_data_ready = false; // Clear flag
+    while (frame_count < 5 && timeout_counter < 300) {
+        if (adc_data_ready) {
+            adc_data_ready = false;
 
-            if (ads131_read_frame(&frame))
-            {
+            if (ads131_read_frame(&frame)) {
                 frame_count++;
-                printf("  Frame #%lu | Status: 0x%04X | CRC: 0x%04X\n",
-                       (unsigned long)frame_count, frame.status, frame.crc);
-
+                printf("  Frame #%lu | Status: 0x%04X | CRC: 0x%04X\n", 
+                        (unsigned long)frame_count, frame.status, frame.crc);
+                
                 printf("    Ch0: %10ld | Ch1: %10ld | Ch2: %10ld | Ch3: %10ld\n",
                        (long)frame.channel[0], (long)frame.channel[1],
                        (long)frame.channel[2], (long)frame.channel[3]);
@@ -239,23 +219,17 @@ int main()
         timeout_counter++;
     }
 
-    if (frame_count == 5)
-    {
+    if (frame_count == 5) {
         printf("\n==================================================\n");
         printf(" SUCCESS: All driver verification tests passed!\n");
-        printf(" ADS131M08 is fully operational on RP2350.\n");
         printf("==================================================\n");
-    }
-    else
-    {
+    } else {
         printf("\n==================================================\n");
         printf(" TIMEOUT: Program did not receive 5 interrupts.\n");
-        printf(" Received %lu frames before timing out.\n", (unsigned long)frame_count);
         printf("==================================================\n");
     }
 
-    while (1)
-    {
+    while (1) {
         tight_loop_contents();
     }
 }

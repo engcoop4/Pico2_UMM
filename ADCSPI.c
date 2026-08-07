@@ -1,5 +1,7 @@
 #include "ADCSPI.h"
 #include <stdio.h>
+#include "hardware/pwm.h"
+#include "hardware/clocks.h"
 
 static inline void ads131_cs_select(void) {
     gpio_put(ADS131_CS, 0);
